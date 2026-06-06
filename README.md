@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/images/logo.png" alt="ProTasker Logo" width="120" />
+  <img src="https://raw.githubusercontent.com/Va09joshi/ProTasker_Main/main/assets/images/logo.png" alt="ProTasker Logo" width="140" />
 </p>
 
 <h1 align="center">ProTasker</h1>
@@ -169,5 +169,5 @@ This project is licensed under the MIT License — see the [LICENSE](LICENSE) fi
 ---
 
 <p align="center">
-  Built with ❤️ by <b>KK Infotech</b>
+  Built with ❤️ by <b>Vaibhav Joshi</b>
 </p>

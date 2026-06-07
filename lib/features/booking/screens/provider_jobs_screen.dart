@@ -274,13 +274,13 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
         backgroundColor: AppColors.background,
         appBar: AppBar(
           title: const Text('Manage Jobs'),
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.primary, foregroundColor: Colors.white,
           bottom: TabBar(
             controller: _tabController,
-            indicatorColor: AppColors.accent,
+            indicatorColor: Colors.white,
             indicatorSize: TabBarIndicatorSize.tab,
-            labelColor: AppColors.textPrimary,
-            unselectedLabelColor: AppColors.textSecondary,
+            labelColor: Colors.white,
+            unselectedLabelColor: Colors.white70,
             labelStyle: AppTextStyles.labelLarge,
             unselectedLabelStyle: AppTextStyles.labelLarge,
             tabs: const [

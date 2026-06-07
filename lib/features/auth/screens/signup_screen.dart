@@ -66,7 +66,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Account'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
       ),
       body: SafeArea(
         child: Center(

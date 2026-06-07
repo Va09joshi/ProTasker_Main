@@ -77,7 +77,7 @@ class ServiceDetailScreen extends ConsumerWidget {
     return SliverAppBar(
       expandedHeight: 300,
       pinned: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: AppColors.primary, foregroundColor: Colors.white,
       flexibleSpace: FlexibleSpaceBar(
         background: PageView.builder(
           itemCount: service.images.isNotEmpty ? service.images.length : 1,
@@ -150,7 +150,7 @@ class ServiceDetailScreen extends ConsumerWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text('\$${service.basePrice.toStringAsFixed(2)}', style: AppTextStyles.displayMedium.copyWith(color: AppColors.primary)),
+            Text('₹${service.basePrice.toStringAsFixed(2)}', style: AppTextStyles.displayMedium.copyWith(color: AppColors.primary)),
             const SizedBox(width: 4),
             Padding(
               padding: const EdgeInsets.only(bottom: 4.0),

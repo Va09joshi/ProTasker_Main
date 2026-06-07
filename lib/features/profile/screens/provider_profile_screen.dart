@@ -194,7 +194,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
         backgroundColor: AppColors.background,
         appBar: AppBar(
           title: const Text('My Profile'),
-          backgroundColor: AppColors.surface,
+          backgroundColor: AppColors.primary, foregroundColor: Colors.white,
           scrolledUnderElevation: 0,
           actions: [
             if (_isEditing)

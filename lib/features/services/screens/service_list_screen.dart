@@ -36,7 +36,7 @@ class _ServiceListScreenState extends ConsumerState<ServiceListScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: Text(widget.category != null ? widget.category!.name.toUpperCase() : 'All Services'),
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
         scrolledUnderElevation: 0,
         actions: [
           IconButton(
@@ -159,8 +159,8 @@ class _FilterBottomSheetState extends ConsumerState<_FilterBottomSheet> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('\$${_minPrice.toInt()}', style: AppTextStyles.headingMedium.copyWith(color: AppColors.primary)),
-              Text('\$${_maxPrice.toInt()}', style: AppTextStyles.headingMedium.copyWith(color: AppColors.primary)),
+              Text('₹${_minPrice.toInt()}', style: AppTextStyles.headingMedium.copyWith(color: AppColors.primary)),
+              Text('₹${_maxPrice.toInt()}', style: AppTextStyles.headingMedium.copyWith(color: AppColors.primary)),
             ],
           ),
           RangeSlider(

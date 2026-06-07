@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/theme/theme.dart';
 import '../../../shared/models/models.dart';
@@ -115,6 +116,117 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
+  Future<void> _dialNumber(String userId) async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(userId).get();
+      if (doc.exists && doc.data() != null) {
+        final phone = doc.data()!['phone'] as String?;
+        if (phone != null && phone.isNotEmpty) {
+          final uri = Uri.parse('tel:$phone');
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri);
+            return;
+          }
+        }
+      }
+      if (mounted) SnackbarHelper.error(context, 'Phone number not available');
+    } catch (e) {
+      if (mounted) SnackbarHelper.error(context, 'Could not launch dialer');
+    }
+  }
+
+  void _showUserInfo(String userId) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return FutureBuilder<DocumentSnapshot>(
+          future: FirebaseFirestore.instance.collection('users').doc(userId).get(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return Container(
+                height: 200,
+                decoration: const BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusXL)),
+                ),
+                child: const Center(child: CircularProgressIndicator()),
+              );
+            }
+            final data = snapshot.data!.data() as Map<String, dynamic>?;
+            if (data == null) return const SizedBox.shrink();
+
+            final isDark = Theme.of(context).brightness == Brightness.dark;
+            final String name = data['name'] ?? 'Unknown';
+            final String? photo = data['profilePhoto'];
+            final String? phone = data['phone'];
+            final String role = data['role'] ?? '';
+
+            return Container(
+              padding: const EdgeInsets.all(AppDimensions.paddingXL),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.darkSurface : AppColors.surface,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusXL)),
+              ),
+              child: SafeArea(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: AppDimensions.paddingXL),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    AppAvatar(name: name, imageUrl: photo, size: 80),
+                    const SizedBox(height: AppDimensions.paddingMD),
+                    Text(
+                      name,
+                      style: AppTextStyles.headingLarge.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    if (role.isNotEmpty) ...[
+                      const SizedBox(height: AppDimensions.paddingXS),
+                      Text(
+                        role.toUpperCase(),
+                        style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                    const SizedBox(height: AppDimensions.paddingXL),
+                    if (phone != null && phone.isNotEmpty)
+                      ListTile(
+                        leading: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: AppColors.primary.withValues(alpha: 0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.phone_rounded, color: AppColors.primary),
+                        ),
+                        title: Text(phone, style: AppTextStyles.bodyLarge),
+                        subtitle: const Text('Mobile', style: AppTextStyles.caption),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.call, color: AppColors.success),
+                          onPressed: () {
+                            Navigator.pop(context);
+                            _dialNumber(userId);
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: AppDimensions.paddingLG),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -145,29 +257,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             return Scaffold(
               backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
               appBar: AppBar(
-                backgroundColor: Colors.transparent,
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
                 scrolledUnderElevation: 0,
-                elevation: 1,
-                shadowColor: Colors.black.withValues(alpha: 0.1),
-                flexibleSpace: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        isDark ? AppColors.darkSurface : AppColors.surface,
-                        isDark ? AppColors.darkSurface : AppColors.primary.withValues(alpha: 0.05),
-                      ],
-                    ),
-                  ),
-                ),
+                elevation: 0,
+                iconTheme: const IconThemeData(color: Colors.white),
                 titleSpacing: 0,
                 title: Row(
                   children: [
                     AppAvatar(
                       name: otherName, 
                       imageUrl: chatData?[user.role == UserRole.client ? 'providerPhoto' : 'clientPhoto'] as String?, 
-                      size: 40
+                      size: 40,
+                      textColor: Colors.white,
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
                     ),
                     const SizedBox(width: AppDimensions.paddingMD),
                     Expanded(
@@ -176,13 +279,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         children: [
                           Text(
                             otherName, 
-                            style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700),
+                            style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.w700, color: Colors.white),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                           isOtherTypingAsync.when(
                             data: (isTyping) => isTyping 
-                              ? Text('typing...', style: AppTextStyles.labelSmall.copyWith(color: AppColors.accent, fontStyle: FontStyle.italic))
+                              ? Text('typing...', style: AppTextStyles.labelSmall.copyWith(color: Colors.white70, fontStyle: FontStyle.italic))
                               : Row(
                                   children: [
                                     Container(
@@ -190,7 +293,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                                       decoration: const BoxDecoration(color: AppColors.success, shape: BoxShape.circle),
                                     ),
                                     const SizedBox(width: 4),
-                                    Text('Online', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                                    Text('Online', style: AppTextStyles.caption.copyWith(color: Colors.white70)),
                                   ],
                                 ),
                             loading: () => const SizedBox.shrink(),
@@ -204,18 +307,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 actions: [
                   IconButton(
                     icon: const Icon(Icons.call_outlined),
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-                    onPressed: () => SnackbarHelper.info(context, 'Voice call coming soon'),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.videocam_outlined),
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-                    onPressed: () => SnackbarHelper.info(context, 'Video call coming soon'),
+                    color: Colors.white,
+                    onPressed: () {
+                      if (otherId.isNotEmpty) _dialNumber(otherId);
+                    },
                   ),
                   IconButton(
                     icon: const Icon(Icons.more_vert_rounded),
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-                    onPressed: () {},
+                    color: Colors.white,
+                    onPressed: () {
+                      if (otherId.isNotEmpty) _showUserInfo(otherId);
+                    },
                   ),
                   const SizedBox(width: AppDimensions.paddingSM),
                 ],

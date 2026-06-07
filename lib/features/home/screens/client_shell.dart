@@ -66,16 +66,14 @@ class _ClientShellState extends ConsumerState<ClientShell> {
                 children: [
                   _buildNavItem(
                     context: context,
-                    icon: Icons.home_outlined,
-                    selectedIcon: Icons.home_rounded,
+                    imagePath: 'assets/icons/home.png',
                     label: 'Home',
                     index: 0,
                     currentIndex: currentIndex,
                   ),
                   _buildNavItem(
                     context: context,
-                    icon: Icons.calendar_month_outlined,
-                    selectedIcon: Icons.calendar_month_rounded,
+                    imagePath: 'assets/icons/bookings.png',
                     label: 'Bookings',
                     index: 1,
                     currentIndex: currentIndex,
@@ -83,8 +81,7 @@ class _ClientShellState extends ConsumerState<ClientShell> {
                   ),
                   _buildNavItem(
                     context: context,
-                    icon: Icons.chat_bubble_outline_rounded,
-                    selectedIcon: Icons.chat_bubble_rounded,
+                    imagePath: 'assets/icons/chat.png',
                     label: 'Chat',
                     index: 2,
                     currentIndex: currentIndex,
@@ -92,8 +89,7 @@ class _ClientShellState extends ConsumerState<ClientShell> {
                   ),
                   _buildNavItem(
                     context: context,
-                    icon: Icons.person_outline_rounded,
-                    selectedIcon: Icons.person_rounded,
+                    imagePath: 'assets/icons/profile.png',
                     label: 'Profile',
                     index: 3,
                     currentIndex: currentIndex,
@@ -109,8 +105,7 @@ class _ClientShellState extends ConsumerState<ClientShell> {
 
   Widget _buildNavItem({
     required BuildContext context,
-    required IconData icon,
-    required IconData selectedIcon,
+    required String imagePath,
     required String label,
     required int index,
     required int currentIndex,
@@ -119,7 +114,12 @@ class _ClientShellState extends ConsumerState<ClientShell> {
     final isSelected = index == currentIndex;
     final color = isSelected ? AppColors.primary : AppColors.textTertiary;
     
-    Widget iconWidget = Icon(isSelected ? selectedIcon : icon, color: color);
+    Widget iconWidget = Image.asset(
+      imagePath,
+      width: 24,
+      height: 24,
+      color: color,
+    );
     if (badgeCount > 0) {
       iconWidget = Badge(
         label: Text(badgeCount.toString()),

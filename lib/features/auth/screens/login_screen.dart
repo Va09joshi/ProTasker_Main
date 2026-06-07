@@ -297,7 +297,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       // Google button
                       AppButton(
                         label: 'Sign in with Google',
-                        iconWidget: const FaIcon(FontAwesomeIcons.google, size: 20),
+                        iconWidget: Image.network(
+                          'https://developers.google.com/identity/images/g-logo.png',
+                          height: 24,
+                          width: 24,
+                          errorBuilder: (context, error, stackTrace) => const FaIcon(FontAwesomeIcons.google, size: 20),
+                        ),
                         variant: ButtonVariant.secondary,
                         isLoading: isLoading,
                         onPressed: _loginWithGoogle,

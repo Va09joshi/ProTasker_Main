@@ -11,8 +11,18 @@ import '../../../core/utils/snackbar_helper.dart';
 import '../../../shared/providers/user_session_provider.dart';
 import '../../../core/router/route_names.dart';
 
-class ProviderDashboardScreen extends ConsumerWidget {
+import '../../location/screens/map_picker_screen.dart';
+import '../../../core/services/location_service.dart';
+
+class ProviderDashboardScreen extends ConsumerStatefulWidget {
   const ProviderDashboardScreen({super.key});
+
+  @override
+  ConsumerState<ProviderDashboardScreen> createState() => _ProviderDashboardScreenState();
+}
+
+class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScreen> {
+  bool _hasCheckedLocation = false;
 
   Future<void> _updateBookingStatus(BuildContext context, String bookingId, BookingStatus status, {String? reason}) async {
     try {
@@ -94,7 +104,7 @@ class ProviderDashboardScreen extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
 
     return Scaffold(
@@ -112,17 +122,97 @@ class ProviderDashboardScreen extends ConsumerWidget {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
+              SliverAppBar(
+                expandedHeight: 60,
+                collapsedHeight: 60,
+                floating: true,
+                pinned: true,
+                backgroundColor: AppColors.background,
+                surfaceTintColor: Colors.transparent,
+                foregroundColor: AppColors.textPrimary,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                title: Text('Dashboard', style: AppTextStyles.displayMedium.copyWith(color: AppColors.textPrimary)),
+                actions: [
+                  userAsync.when(
+                    data: (user) {
+                      if (user == null) return const SizedBox.shrink();
+                      
+                      if (!_hasCheckedLocation) {
+                        _hasCheckedLocation = true;
+                        if (user.address.lat == 0.0 && user.address.lng == 0.0) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _fetchDeviceLocation(context, user.uid);
+                          });
+                        }
+                      }
+                      
+                      return Padding(
+                        padding: const EdgeInsets.only(right: AppDimensions.paddingLG),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: AppDimensions.padding12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: AppColors.surface,
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: user.isOnline ? AppColors.success : AppColors.textTertiary,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: AppDimensions.paddingSM),
+                              Text(
+                                user.isOnline ? 'Online' : 'Offline', 
+                                style: AppTextStyles.labelSmall.copyWith(
+                                  color: user.isOnline ? AppColors.textPrimary : AppColors.textSecondary,
+                                )
+                              ),
+                              const SizedBox(width: AppDimensions.paddingSM),
+                              SizedBox(
+                                height: 20,
+                                child: Switch(
+                                  value: user.isOnline,
+                                  onChanged: (val) => _toggleOnlineStatus(context, user.uid, user.isOnline),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+                ],
+              ),
               SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
                     horizontal: MediaQuery.of(context).size.width > 600 ? 32.0 : AppDimensions.paddingLG,
-                    vertical: AppDimensions.paddingLG,
+                    vertical: AppDimensions.paddingMD,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildHeader(context, userAsync),
-                      const SizedBox(height: AppDimensions.paddingXL),
+                      userAsync.when(
+                        data: (user) {
+                          if (user == null) return const SizedBox.shrink();
+                          final firstName = user.name.split(' ').first;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: AppDimensions.paddingLG),
+                            child: Text('Welcome back, $firstName', style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary)),
+                          );
+                        },
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, __) => const SizedBox.shrink(),
+                      ),
                       _buildStatsGrid(ref),
                       const SizedBox(height: AppDimensions.paddingXL),
                       _buildJobBoardBanner(context),
@@ -144,70 +234,6 @@ class ProviderDashboardScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context, AsyncValue<UserModel?> userAsync) {
-    return userAsync.when(
-      data: (user) {
-        if (user == null) return const SizedBox.shrink();
-        final firstName = user.name.split(' ').first;
-        
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Dashboard', style: AppTextStyles.displayMedium),
-                  const SizedBox(height: AppDimensions.paddingXS),
-                  Text('Welcome back, $firstName', style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textSecondary)),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.padding12, vertical: 8),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: user.isOnline ? AppColors.success : AppColors.textTertiary,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: AppDimensions.paddingSM),
-                  Text(
-                    user.isOnline ? 'Online' : 'Offline', 
-                    style: AppTextStyles.labelSmall.copyWith(
-                      color: user.isOnline ? AppColors.textPrimary : AppColors.textSecondary,
-                    )
-                  ),
-                  const SizedBox(width: AppDimensions.paddingSM),
-                  SizedBox(
-                    height: 20,
-                    child: Switch(
-                      value: user.isOnline,
-                      onChanged: (val) => _toggleOnlineStatus(context, user.uid, user.isOnline),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        );
-      },
-      loading: () => const SizedBox(height: 60),
-      error: (_, __) => const SizedBox.shrink(),
-    );
-  }
-
   Widget _buildStatsGrid(WidgetRef ref) {
     final statsAsync = ref.watch(providerStatsProvider);
 
@@ -223,7 +249,7 @@ class ProviderDashboardScreen extends ConsumerWidget {
                 Expanded(
                   child: _buildStatCard(
                     'Today',
-                    '\$${stats.todayEarnings.toStringAsFixed(0)}',
+                    '₹${stats.todayEarnings.toStringAsFixed(0)}',
                     Icons.payments_rounded,
                     AppColors.success,
                   ),
@@ -550,6 +576,126 @@ class ProviderDashboardScreen extends ConsumerWidget {
       },
       loading: () => const LoadingShimmer(type: ShimmerType.list),
       error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.refresh(providerUpcomingJobsProvider)),
+    );
+  }
+
+  Future<void> _fetchDeviceLocation(BuildContext context, String uid) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: AppDimensions.paddingLG),
+            const Text('Fetching location...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final pos = await LocationService.getCurrentLocation();
+      if (mounted) Navigator.pop(context); // Close loading dialog
+
+      if (pos != null) {
+        final pm = await LocationService.getPlacemarkFromCoordinates(pos.latitude, pos.longitude);
+        if (pm != null && pm.locality != null) {
+          await FirebaseFirestore.instance.collection('users').doc(uid).update({
+            'address.city': pm.locality,
+            'address.lat': pos.latitude,
+            'address.lng': pos.longitude,
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Location updated to ${pm.locality}')),
+            );
+          }
+        } else {
+          if (mounted) _promptForLocation(context, uid);
+        }
+      } else {
+        if (mounted) _promptForLocation(context, uid);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        _promptForLocation(context, uid);
+      }
+    }
+  }
+
+  void _promptForLocation(BuildContext context, String uid) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.darkSurface
+            : AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+          side: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.darkBorder
+                : AppColors.border,
+            width: 1,
+          ),
+        ),
+        title: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppDimensions.paddingSM),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 28),
+            ),
+            const SizedBox(height: AppDimensions.paddingMD),
+            const Text('Set Your Location', style: AppTextStyles.headingLarge),
+          ],
+        ),
+        content: const Text(
+          'Please select your location on the map to find clients near you.',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  label: 'Later',
+                  variant: ButtonVariant.ghost,
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ),
+              const SizedBox(width: AppDimensions.paddingMD),
+              Expanded(
+                child: AppButton(
+                  label: 'Choose on Map',
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    final result = await context.pushNamed<dynamic>(RouteNames.mapPicker);
+                    if (result != null && result is MapPickerResult) {
+                      final pm = result.placemark;
+                      if (pm.locality != null) {
+                        FirebaseFirestore.instance.collection('users').doc(uid).update({
+                          'address.city': pm.locality,
+                          'address.lat': result.latitude,
+                          'address.lng': result.longitude,
+                        });
+                      }
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

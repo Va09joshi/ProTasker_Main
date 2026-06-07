@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,14 +11,21 @@ import '../../../core/router/route_names.dart';
 import '../providers/home_providers.dart';
 import '../../location/screens/map_picker_screen.dart';
 import '../../jobs/models/job_post.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:intl/intl.dart';
+import '../widgets/auto_sliding_banner.dart';
+import '../../../core/services/location_service.dart';
 
-class ClientHomeScreen extends ConsumerWidget {
+class ClientHomeScreen extends ConsumerStatefulWidget {
   const ClientHomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ClientHomeScreen> createState() => _ClientHomeScreenState();
+}
+
+class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
+  bool _hasCheckedLocation = false;
+
+  @override
+  Widget build(BuildContext context) {
     final userAsync = ref.watch(currentUserProvider);
     final popularServicesAsync = ref.watch(popularServicesProvider);
     final bookAgainAsync = ref.watch(bookAgainProvider);
@@ -26,16 +34,61 @@ class ClientHomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.pushNamed(RouteNames.postJob),
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add, color: Colors.white),
-        label: const Text('Post Problem', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [AppColors.primary, AppColors.secondary],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusXL),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.primary.withValues(alpha: 0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: () => context.pushNamed(RouteNames.postJob),
+            borderRadius: BorderRadius.circular(AppDimensions.radiusXL),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.post_add_rounded, color: Colors.white, size: 22),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Post',
+                    style: AppTextStyles.labelLarge.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
-      body: SafeArea(
-        child: userAsync.when(
+      body: userAsync.when(
           data: (user) {
             if (user == null) return const Center(child: Text('User not found'));
+            
+            if (!_hasCheckedLocation) {
+              _hasCheckedLocation = true;
+              if (user.address.lat == 0.0 && user.address.lng == 0.0) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _fetchDeviceLocation(context, user.uid);
+                });
+              }
+            }
             
             return RefreshIndicator(
               onRefresh: () async {
@@ -48,6 +101,84 @@ class ClientHomeScreen extends ConsumerWidget {
               child: CustomScrollView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 slivers: [
+                  SliverAppBar(
+                    expandedHeight: 70,
+                    collapsedHeight: 70,
+                    floating: true,
+                    pinned: true,
+                    backgroundColor: AppColors.primary,
+                    surfaceTintColor: Colors.transparent,
+                    foregroundColor: Colors.white,
+                    systemOverlayStyle: const SystemUiOverlayStyle(
+                      statusBarColor: Colors.transparent,
+                      statusBarIconBrightness: Brightness.light,
+                      statusBarBrightness: Brightness.dark,
+                    ),
+                    elevation: 0,
+                    scrolledUnderElevation: 0,
+                    title: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Hello, ${user.name.split(' ').first}', 
+                          style: AppTextStyles.headingLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        GestureDetector(
+                          onTap: () => _showLocationBottomSheet(context, user.uid, user.address.city),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.location_on_rounded, size: 16, color: Colors.white70),
+                              const SizedBox(width: 4),
+                              Text(
+                                user.address.city.isNotEmpty ? user.address.city : 'Set your city',
+                                style: AppTextStyles.labelLarge.copyWith(color: Colors.white70),
+                              ),
+                              const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: Colors.white70),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    actions: [
+                      Padding(
+                        padding: const EdgeInsets.only(right: AppDimensions.paddingLG),
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 2),
+                              ),
+                              child: AppAvatar(
+                                name: user.name,
+                                imageUrl: user.profilePhoto,
+                                size: 40,
+                                textColor: Colors.white,
+                                backgroundColor: Colors.white.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            Positioned(
+                              right: 0,
+                              top: 2,
+                              child: Container(
+                                width: 12,
+                                height: 12,
+                                decoration: BoxDecoration(
+                                  color: AppColors.error,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: AppColors.primary, width: 2),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                   SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.symmetric(
@@ -57,9 +188,9 @@ class ClientHomeScreen extends ConsumerWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildHeader(context, user),
-                          const SizedBox(height: AppDimensions.paddingLG),
                           _buildSearchBar(context),
+                          const SizedBox(height: AppDimensions.paddingXL),
+                          const AutoSlidingBanner(),
                           const SizedBox(height: AppDimensions.paddingXL),
                           _buildPostProblemBanner(context),
                           const SizedBox(height: AppDimensions.paddingXL),
@@ -83,63 +214,6 @@ class ClientHomeScreen extends ConsumerWidget {
           loading: () => const LoadingShimmer(type: ShimmerType.profile),
           error: (err, st) => ErrorView(message: err.toString(), onRetry: () => ref.refresh(currentUserProvider)),
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, UserModel user) {
-    final firstName = user.name.split(' ').first;
-    
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Hello, $firstName', style: AppTextStyles.displayMedium),
-              const SizedBox(height: AppDimensions.paddingXS),
-              GestureDetector(
-                onTap: () => _showLocationBottomSheet(context, user.uid, user.address.city),
-                child: Row(
-                  children: [
-                    const Icon(Icons.location_on_rounded, size: 16, color: AppColors.accent),
-                    const SizedBox(width: 4),
-                    Text(
-                      user.address.city.isNotEmpty ? user.address.city : 'Set your city',
-                      style: AppTextStyles.labelLarge.copyWith(color: AppColors.textSecondary),
-                    ),
-                    const Icon(Icons.keyboard_arrow_down_rounded, size: 16, color: AppColors.textSecondary),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        Stack(
-          children: [
-            AppAvatar(
-              name: user.name,
-              imageUrl: user.profilePhoto,
-              size: 48,
-            ),
-            Positioned(
-              right: 0,
-              top: 0,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: AppColors.error,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: AppColors.background, width: 2),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
     );
   }
 
@@ -224,17 +298,14 @@ class ClientHomeScreen extends ConsumerWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG, vertical: AppDimensions.paddingMD),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [AppColors.primary, AppColors.primary.withAlpha(204)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+          border: Border.all(color: AppColors.border, width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: AppColors.primary.withAlpha(76),
-              blurRadius: 8,
-              offset: const Offset(0, 3),
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
             ),
           ],
         ),
@@ -246,36 +317,51 @@ class ClientHomeScreen extends ConsumerWidget {
                 children: [
                   Text(
                     'Got a problem?',
-                    style: AppTextStyles.headingLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: AppTextStyles.headingLarge.copyWith(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   Text(
                     'Create a post to let locals help!',
-                    style: AppTextStyles.bodyMedium.copyWith(color: Colors.white.withAlpha(230)),
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                   const SizedBox(height: AppDimensions.paddingMD),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMD, vertical: 6),
+                    padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMD, vertical: 8),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.primary,
                       borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
                     ),
                     child: Text(
                       'Create a Post',
-                      style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   )
                 ],
               ),
             ),
             const SizedBox(width: AppDimensions.paddingMD),
-            Container(
-              padding: const EdgeInsets.all(AppDimensions.paddingMD),
-              decoration: BoxDecoration(
-                color: Colors.white.withAlpha(51),
-                shape: BoxShape.circle,
+            Image.asset(
+              'assets/images/list-check.png',
+              width: 56,
+              height: 56,
+              color: AppColors.primary,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Container(
+                padding: const EdgeInsets.all(AppDimensions.paddingSM),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.post_add_rounded, color: AppColors.primary, size: 28),
               ),
-              child: const Icon(Icons.add_task_rounded, color: Colors.white, size: 28),
             ),
           ],
         ),
@@ -284,24 +370,48 @@ class ClientHomeScreen extends ConsumerWidget {
   }
 
   Widget _buildCategories(BuildContext context) {
+    final categories = ServiceCategory.values;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text('Categories', style: AppTextStyles.headingLarge),
+        const SizedBox(height: 8),
+        const Divider(height: 1, color: AppColors.border),
         const SizedBox(height: AppDimensions.paddingMD),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 4,
-            crossAxisSpacing: AppDimensions.paddingSM,
-            mainAxisSpacing: AppDimensions.paddingSM,
-            childAspectRatio: 0.8,
-          ),
-          itemCount: ServiceCategory.values.length,
-          itemBuilder: (context, index) {
-            final category = ServiceCategory.values[index];
-            return _buildCategoryGridItem(category, context);
+        LayoutBuilder(
+          builder: (context, constraints) {
+            const double spacing = 16.0;
+            final double itemWidth = (constraints.maxWidth - 2 * spacing) / 3;
+            return Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[0], context)),
+                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[1], context)),
+                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[2], context)),
+                  ],
+                ),
+                const SizedBox(height: AppDimensions.paddingLG),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[3], context)),
+                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[4], context)),
+                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[5], context)),
+                  ],
+                ),
+                const SizedBox(height: AppDimensions.paddingLG),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[6], context)),
+                    const SizedBox(width: spacing),
+                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[7], context)),
+                  ],
+                ),
+              ],
+            );
           },
         ),
       ],
@@ -309,81 +419,79 @@ class ClientHomeScreen extends ConsumerWidget {
   }
 
   Widget _buildCategoryGridItem(ServiceCategory category, BuildContext context) {
-    var icon = FontAwesomeIcons.ellipsis;
+    String assetPath;
     String label;
-    Color color;
     
     switch (category) {
       case ServiceCategory.cleaning:
-        icon = FontAwesomeIcons.broom;
+        assetPath = 'assets/images/cleaning.png';
         label = 'Cleaning';
-        color = const Color(0xFF00B4D8); // Cyan
         break;
       case ServiceCategory.plumbing:
-        icon = FontAwesomeIcons.faucetDrip;
+        assetPath = 'assets/images/plumber.png';
         label = 'Plumbing';
-        color = const Color(0xFF4361EE); // Blue
         break;
       case ServiceCategory.electrical:
-        icon = FontAwesomeIcons.plug;
-        label = 'Electrical';
-        color = const Color(0xFFF72585); // Pink
+        assetPath = 'assets/images/electrician.png';
+        label = 'Electrician';
         break;
       case ServiceCategory.painting:
-        icon = FontAwesomeIcons.paintRoller;
+        assetPath = 'assets/images/painter.png';
         label = 'Painting';
-        color = const Color(0xFFFF9F1C); // Orange
         break;
       case ServiceCategory.carpentry:
-        icon = FontAwesomeIcons.hammer;
+        assetPath = 'assets/images/carpentar.png';
         label = 'Carpentry';
-        color = const Color(0xFF7209B7); // Purple
         break;
       case ServiceCategory.appliance:
-        icon = FontAwesomeIcons.blender;
-        label = 'Appliance';
-        color = const Color(0xFF38B000); // Green
+        assetPath = 'assets/images/appliances_home.png';
+        label = 'Appliance Repair';
         break;
       case ServiceCategory.shifting:
-        icon = FontAwesomeIcons.truckFast;
-        label = 'Shifting';
-        color = const Color(0xFFF07167); // Coral
+        assetPath = 'assets/images/moving.png';
+        label = 'Moving';
         break;
       case ServiceCategory.other:
-        icon = FontAwesomeIcons.ellipsis;
+        assetPath = 'assets/images/handyman.png';
         label = 'Other';
-        color = const Color(0xFF6C757D); // Grey
         break;
     }
 
     return GestureDetector(
       onTap: () {
-        context.push('/services?category=${category.name}');
+        context.push('/client/category-providers/${category.name}');
       },
       child: Column(
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: FaIcon(
-              icon,
-              color: color,
-              size: 24,
+          AspectRatio(
+            aspectRatio: 1.0,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: AppColors.border, width: 1.5),
+              ),
+              child: Image.asset(
+                assetPath,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           const SizedBox(height: 10),
           Text(
             label,
-            style: AppTextStyles.caption.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
+            style: AppTextStyles.labelLarge.copyWith(
+              color: const Color(0xFF1E293B),
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+              height: 1.2,
             ),
             textAlign: TextAlign.center,
-            maxLines: 1,
+            maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
         ],
@@ -405,6 +513,8 @@ class ClientHomeScreen extends ConsumerWidget {
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        const Divider(height: 1, color: AppColors.border),
         const SizedBox(height: AppDimensions.paddingMD),
         popularServicesAsync.when(
           data: (services) {
@@ -443,6 +553,8 @@ class ClientHomeScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Book Again', style: AppTextStyles.headingLarge),
+            const SizedBox(height: 8),
+            const Divider(height: 1, color: AppColors.border),
             const SizedBox(height: AppDimensions.paddingMD),
             Column(
               children: bookings.map((booking) {
@@ -509,69 +621,102 @@ class ClientHomeScreen extends ConsumerWidget {
                 ),
               ],
             ),
+            const SizedBox(height: 8),
+            const Divider(height: 1, color: AppColors.border),
             const SizedBox(height: AppDimensions.paddingMD),
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,
               child: Row(
                 children: posts.map((post) {
-                  var iconData = FontAwesomeIcons.ellipsis;
+                  String assetPath = 'assets/images/handyman.png';
                   final catLower = post.category.toLowerCase();
-                  if (catLower.contains('clean')) iconData = FontAwesomeIcons.broom;
-                  else if (catLower.contains('plumb')) iconData = FontAwesomeIcons.faucetDrip;
-                  else if (catLower.contains('electric')) iconData = FontAwesomeIcons.plug;
-                  else if (catLower.contains('paint')) iconData = FontAwesomeIcons.paintRoller;
-                  else if (catLower.contains('carpent')) iconData = FontAwesomeIcons.hammer;
-                  else if (catLower.contains('appliance')) iconData = FontAwesomeIcons.blender;
-                  else if (catLower.contains('shift')) iconData = FontAwesomeIcons.truckFast;
+                  if (catLower.contains('clean')) assetPath = 'assets/images/cleaning.png';
+                  else if (catLower.contains('plumb')) assetPath = 'assets/images/plumber.png';
+                  else if (catLower.contains('electric')) assetPath = 'assets/images/electrician.png';
+                  else if (catLower.contains('paint')) assetPath = 'assets/images/painter.png';
+                  else if (catLower.contains('carpent')) assetPath = 'assets/images/carpentar.png';
+                  else if (catLower.contains('appliance')) assetPath = 'assets/images/appliances_home.png';
+                  else if (catLower.contains('shift') || catLower.contains('mov')) assetPath = 'assets/images/moving.png';
 
                   return GestureDetector(
                     onTap: () => context.push('/job/${post.id}'),
                     child: Container(
-                      width: 80,
+                      width: 220,
+                      height: 68,
                       margin: const EdgeInsets.only(right: AppDimensions.paddingMD),
-                      child: Column(
+                      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMD, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                        border: Border.all(color: AppColors.border, width: 1.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.03),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Row(
                         children: [
                           Stack(
+                            clipBehavior: Clip.none,
                             children: [
                               Container(
-                                padding: const EdgeInsets.all(20),
+                                padding: const EdgeInsets.all(8),
+                                width: 44,
+                                height: 44,
                                 decoration: BoxDecoration(
-                                  color: AppColors.surface,
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: AppColors.border, width: 2),
+                                  color: AppColors.surfaceAlt,
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
                                 ),
-                                child: FaIcon(
-                                  iconData,
-                                  color: AppColors.primary,
-                                  size: 24,
+                                child: Image.asset(
+                                  assetPath,
+                                  fit: BoxFit.contain,
                                 ),
                               ),
                               Positioned(
-                                right: 0,
-                                top: 0,
+                                right: -4,
+                                top: -4,
                                 child: Container(
-                                  width: 18,
-                                  height: 18,
+                                  width: 12,
+                                  height: 12,
                                   decoration: BoxDecoration(
                                     color: post.status == 'open' ? AppColors.success : AppColors.warning,
                                     shape: BoxShape.circle,
-                                    border: Border.all(color: AppColors.background, width: 3),
+                                    border: Border.all(color: Colors.white, width: 2),
                                   ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            post.title,
-                            style: AppTextStyles.caption.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textPrimary,
+                          const SizedBox(width: AppDimensions.paddingMD),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  post.title,
+                                  style: AppTextStyles.labelLarge.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  post.status == 'open' ? 'Open' : 'In Progress',
+                                  style: AppTextStyles.caption.copyWith(
+                                    color: post.status == 'open' ? AppColors.success : AppColors.warning,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 10,
+                                  ),
+                                ),
+                              ],
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -584,7 +729,7 @@ class ClientHomeScreen extends ConsumerWidget {
           ],
         );
       },
-      loading: () => const LoadingShimmer(type: ShimmerType.card),
+      loading: () => const Center(child: CircularProgressIndicator()),
       error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.refresh(myJobPostsProvider)),
     );
   }
@@ -603,6 +748,8 @@ class ClientHomeScreen extends ConsumerWidget {
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        const Divider(height: 1, color: AppColors.border),
         const SizedBox(height: AppDimensions.paddingMD),
         nearbyProvidersAsync.when(
           data: (providers) {
@@ -703,6 +850,127 @@ class ClientHomeScreen extends ConsumerWidget {
           error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.refresh(nearbyProvidersProvider)),
         ),
       ],
+    );
+  }
+
+  Future<void> _fetchDeviceLocation(BuildContext context, String uid) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        content: Row(
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(width: AppDimensions.paddingLG),
+            const Text('Fetching location...'),
+          ],
+        ),
+      ),
+    );
+
+    try {
+      final pos = await LocationService.getCurrentLocation();
+      if (mounted) Navigator.pop(context); // Close loading dialog
+
+      if (pos != null) {
+        final pm = await LocationService.getPlacemarkFromCoordinates(pos.latitude, pos.longitude);
+        if (pm != null && pm.locality != null) {
+          await FirebaseFirestore.instance.collection('users').doc(uid).update({
+            'address.city': pm.locality,
+            'address.lat': pos.latitude,
+            'address.lng': pos.longitude,
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Location updated to ${pm.locality}')),
+            );
+          }
+        } else {
+          if (mounted) _promptForLocation(context, uid);
+        }
+      } else {
+        if (mounted) _promptForLocation(context, uid);
+      }
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context); // Close loading dialog
+        _promptForLocation(context, uid);
+      }
+    }
+  }
+
+  void _promptForLocation(BuildContext context, String uid) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark
+            ? AppColors.darkSurface
+            : AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+          side: BorderSide(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? AppColors.darkBorder
+                : AppColors.border,
+            width: 1,
+          ),
+        ),
+        title: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppDimensions.paddingSM),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.location_on_rounded, color: AppColors.primary, size: 28),
+            ),
+            const SizedBox(height: AppDimensions.paddingMD),
+            const Text('Set Your Location', style: AppTextStyles.headingLarge),
+          ],
+        ),
+        content: const Text(
+          'Please select your location on the map to find providers near you.',
+          textAlign: TextAlign.center,
+          style: AppTextStyles.bodyMedium,
+        ),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: AppButton(
+                  label: 'Later',
+                  variant: ButtonVariant.ghost,
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+              ),
+              const SizedBox(width: AppDimensions.paddingMD),
+              Expanded(
+                child: AppButton(
+                  label: 'Choose on Map',
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    final result = await context.pushNamed<dynamic>(RouteNames.mapPicker);
+                    if (result != null && result is MapPickerResult) {
+                      final pm = result.placemark;
+                      if (pm.locality != null) {
+                        FirebaseFirestore.instance.collection('users').doc(uid).update({
+                          'address.city': pm.locality,
+                          'address.lat': result.latitude,
+                          'address.lng': result.longitude,
+                        });
+                      }
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

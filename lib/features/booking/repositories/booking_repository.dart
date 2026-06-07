@@ -23,13 +23,14 @@ class BookingRepository {
     });
   }
 
-  Future<void> acceptProposal(String acceptedBookingId, String jobId) async {
+  Future<void> acceptProposal(String acceptedBookingId, String jobId, String clientId) async {
     final batch = _firestore.batch();
 
     // Fetch all pending bookings for this job
     final pendingBookings = await _firestore.collection(_collection)
+        .where('clientId', isEqualTo: clientId)
         .where('serviceId', isEqualTo: jobId)
-        .where('status', isEqualTo: BookingStatus.pending.name)
+        .where('status', isEqualTo: BookingStatus.proposal.name)
         .get();
 
     for (var doc in pendingBookings.docs) {

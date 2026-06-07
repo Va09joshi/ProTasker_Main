@@ -23,7 +23,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
       backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FA),
       appBar: AppBar(
         title: const Text('Choose Your Role'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
       ),

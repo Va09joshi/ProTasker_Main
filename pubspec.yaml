@@ -86,7 +86,10 @@ flutter:
   assets:
     - .env
     - assets/images/
+    - assets/images/banners/
     - assets/images/onboarding/
+    - assets/icons/
+    - assets/icons/category/
 
 flutter_launcher_icons:
   android: true

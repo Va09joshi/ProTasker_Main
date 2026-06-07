@@ -9,6 +9,8 @@ class AppAvatar extends StatelessWidget {
   final VoidCallback? onTap;
   final bool showOnlineIndicator;
   final bool isOnline;
+  final Color? backgroundColor;
+  final Color? textColor;
 
   const AppAvatar({
     super.key,
@@ -18,6 +20,8 @@ class AppAvatar extends StatelessWidget {
     this.onTap,
     this.showOnlineIndicator = false,
     this.isOnline = false,
+    this.backgroundColor,
+    this.textColor,
   });
 
   String get _initials {
@@ -35,7 +39,7 @@ class AppAvatar extends StatelessWidget {
       height: size,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: AppColors.accent.withValues(alpha: 0.1),
+        color: backgroundColor ?? AppColors.accent.withValues(alpha: 0.1),
         border: Border.all(color: AppColors.border, width: 1),
       ),
       child: imageUrl != null && imageUrl!.isNotEmpty
@@ -86,7 +90,7 @@ class AppAvatar extends StatelessWidget {
         style: TextStyle(
           fontSize: size * 0.36,
           fontWeight: FontWeight.w600,
-          color: AppColors.accent,
+          color: textColor ?? AppColors.accent,
         ),
       ),
     );

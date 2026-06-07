@@ -21,8 +21,9 @@ class ChatListScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Messages'),
-        backgroundColor: AppColors.surface,
+        title: const Text('Messages', style: TextStyle(color: Colors.white)),
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
         scrolledUnderElevation: 0,
       ),
       body: currentUserAsync.when(

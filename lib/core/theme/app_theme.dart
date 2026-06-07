@@ -10,7 +10,7 @@ class AppTheme {
       useMaterial3: true,
       colorScheme: const ColorScheme.light(
         primary: AppColors.primary,
-        secondary: AppColors.primary,
+        secondary: AppColors.secondary,
         surface: AppColors.surface,
         error: AppColors.error,
         onPrimary: Colors.white,
@@ -34,12 +34,12 @@ class AppTheme {
 
       // App Bar
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.background,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        iconTheme: const IconThemeData(color: AppColors.textPrimary, size: 24),
-        titleTextStyle: AppTextStyles.headingLarge.copyWith(color: AppColors.textPrimary),
+        iconTheme: const IconThemeData(color: Colors.white, size: 24),
+        titleTextStyle: AppTextStyles.headingLarge.copyWith(color: Colors.white),
         surfaceTintColor: Colors.transparent,
       ),
 
@@ -239,12 +239,12 @@ class AppTheme {
         labelSmall: AppTextStyles.labelSmall.copyWith(color: AppColors.darkTextSecondary),
       )),
       appBarTheme: AppBarTheme(
-        backgroundColor: AppColors.darkBackground,
+        backgroundColor: AppColors.primary,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
-        iconTheme: const IconThemeData(color: AppColors.darkTextPrimary, size: 24),
-        titleTextStyle: AppTextStyles.headingLarge.copyWith(color: AppColors.darkTextPrimary),
+        iconTheme: const IconThemeData(color: Colors.white, size: 24),
+        titleTextStyle: AppTextStyles.headingLarge.copyWith(color: Colors.white),
         surfaceTintColor: Colors.transparent,
       ),
       cardTheme: CardThemeData(

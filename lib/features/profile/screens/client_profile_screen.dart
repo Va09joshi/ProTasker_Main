@@ -61,7 +61,7 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
         backgroundColor: AppColors.background,
         appBar: AppBar(
           title: const Text('Profile'),
-          backgroundColor: AppColors.surface,
+          backgroundColor: AppColors.primary, foregroundColor: Colors.white,
           scrolledUnderElevation: 0,
           actions: [
             IconButton(
@@ -175,7 +175,7 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
           children: [
             Expanded(child: _buildStatItem('Total Bookings', stats.totalBookings.toString())),
             Container(width: 1, height: 40, color: AppColors.border),
-            Expanded(child: _buildStatItem('Total Spent', '\$${stats.totalSpent.toStringAsFixed(2)}')),
+            Expanded(child: _buildStatItem('Total Spent', '₹${stats.totalSpent.toStringAsFixed(2)}')),
           ],
         ),
         loading: () => const LoadingShimmer(type: ShimmerType.card),
@@ -321,7 +321,10 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
               },
             );
           },
-          loading: () => const LoadingShimmer(type: ShimmerType.list),
+          loading: () => const Padding(
+            padding: EdgeInsets.all(AppDimensions.paddingLG),
+            child: Center(child: CircularProgressIndicator()),
+          ),
           error: (err, _) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG),
             child: ErrorView(

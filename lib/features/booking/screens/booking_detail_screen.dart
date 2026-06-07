@@ -9,8 +9,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/theme.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/providers/user_session_provider.dart';
-import '../../../shared/widgets/status_timeline.dart';
-import '../../../shared/widgets/review_card.dart';
 import '../../chat/repositories/chat_repository.dart';
 import '../providers/booking_detail_provider.dart';
 import 'proof_upload_bottom_sheet.dart';
@@ -148,8 +146,12 @@ class BookingDetailScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.pop(),
+        ),
         title: const Text('Booking Details'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
       ),
       body: SafeArea(
         child: bookingAsync.when(
@@ -176,6 +178,11 @@ class BookingDetailScreen extends ConsumerWidget {
                     
                     _buildServiceInfoCard(booking),
                     const SizedBox(height: AppDimensions.paddingMD),
+                    
+                    if (booking.status == BookingStatus.accepted || booking.status == BookingStatus.onTheWay) ...[
+                      _buildOTPSecurityCard(booking, isClient, context),
+                      const SizedBox(height: AppDimensions.paddingMD),
+                    ],
                     
                     _buildPartyCard(booking, isClient, context, ref),
                     const SizedBox(height: AppDimensions.paddingMD),
@@ -495,7 +502,7 @@ class BookingDetailScreen extends ConsumerWidget {
           width: double.infinity,
           child: AppButton(
             label: 'Start Job',
-            onPressed: () => _updateStatus(context, booking, BookingStatus.inProgress, user.uid),
+            onPressed: () => _showOTPDialog(context, booking, user.uid),
           ),
         );
       }
@@ -513,5 +520,297 @@ class BookingDetailScreen extends ConsumerWidget {
     }
 
     return const SizedBox.shrink();
+  }
+
+  Widget _buildOTPSecurityCard(BookingModel booking, bool isClient, BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final displayOtp = booking.otp ?? (booking.id.hashCode.abs() % 9000 + 1000).toString();
+
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingLG),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkSurface : AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.border,
+          width: AppDimensions.cardBorderWidth,
+        ),
+      ),
+      child: isClient
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.security_rounded, color: AppColors.success, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      'START PIN',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppDimensions.paddingMD),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkBackground : AppColors.background,
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                    border: Border.all(
+                      color: isDark ? AppColors.darkBorder : AppColors.border,
+                      width: 1,
+                    ),
+                  ),
+                  child: Text(
+                    displayOtp.split('').join('  '),
+                    style: AppTextStyles.headingLarge.copyWith(
+                      fontSize: 32,
+                      letterSpacing: 4,
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppDimensions.paddingMD),
+                Text(
+                  'Share this PIN with your provider when they arrive to start the job.',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.lock_rounded, color: AppColors.accent, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'VERIFICATION REQUIRED',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.accent,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppDimensions.paddingSM),
+                Text(
+                  'Ask the client for the security PIN shown on their screen to start this job.',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+    );
+  }
+
+  void _showOTPDialog(BuildContext context, BookingModel booking, String currentUserId) {
+    final displayOtp = booking.otp ?? (booking.id.hashCode.abs() % 9000 + 1000).toString();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _OTPVerificationDialog(
+        expectedOtp: displayOtp,
+        onVerified: () => _updateStatus(context, booking, BookingStatus.inProgress, currentUserId),
+      ),
+    );
+  }
+}
+
+class _OTPVerificationDialog extends StatefulWidget {
+  final String expectedOtp;
+  final VoidCallback onVerified;
+
+  const _OTPVerificationDialog({
+    required this.expectedOtp,
+    required this.onVerified,
+  });
+
+  @override
+  State<_OTPVerificationDialog> createState() => _OTPVerificationDialogState();
+}
+
+class _OTPVerificationDialogState extends State<_OTPVerificationDialog> {
+  final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
+  final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
+  String _errorMessage = '';
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    for (var controller in _controllers) {
+      controller.dispose();
+    }
+    for (var node in _focusNodes) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  void _verifyOtp() {
+    final enteredOtp = _controllers.map((c) => c.text).join();
+    if (enteredOtp.length < 4) {
+      setState(() {
+        _errorMessage = 'Please enter all 4 digits';
+      });
+      return;
+    }
+
+    if (enteredOtp == widget.expectedOtp) {
+      setState(() {
+        _errorMessage = '';
+        _isLoading = true;
+      });
+      Navigator.pop(context);
+      widget.onVerified();
+    } else {
+      setState(() {
+        _errorMessage = 'Incorrect PIN. Please try again.';
+      });
+      // Clear controllers and refocus on first
+      for (var controller in _controllers) {
+        controller.clear();
+      }
+      _focusNodes[0].requestFocus();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AlertDialog(
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1),
+      ),
+      title: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppDimensions.paddingSM),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.security_rounded, color: AppColors.primary, size: 28),
+          ),
+          const SizedBox(height: AppDimensions.paddingMD),
+          Text(
+            'Enter Start PIN',
+            style: AppTextStyles.headingLarge.copyWith(
+              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Ask the client for the 4-digit security PIN shown on their booking screen to verify arrival.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppDimensions.paddingXL),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(4, (index) {
+              return SizedBox(
+                width: 50,
+                height: 56,
+                child: TextFormField(
+                  controller: _controllers[index],
+                  focusNode: _focusNodes[index],
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  maxLength: 1,
+                  autofocus: index == 0,
+                  style: AppTextStyles.headingLarge.copyWith(
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    contentPadding: EdgeInsets.zero,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                      borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.5),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    if (value.isNotEmpty) {
+                      if (index < 3) {
+                        _focusNodes[index + 1].requestFocus();
+                      } else {
+                        _focusNodes[index].unfocus();
+                        _verifyOtp();
+                      }
+                    } else {
+                      if (index > 0) {
+                        _focusNodes[index - 1].requestFocus();
+                      }
+                    }
+                  },
+                ),
+              );
+            }),
+          ),
+          if (_errorMessage.isNotEmpty) ...[
+            const SizedBox(height: AppDimensions.paddingMD),
+            Text(
+              _errorMessage,
+              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ],
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(
+        AppDimensions.paddingLG,
+        AppDimensions.paddingSM,
+        AppDimensions.paddingLG,
+        AppDimensions.paddingLG,
+      ),
+      actions: [
+        Row(
+          children: [
+            Expanded(
+              child: AppButton(
+                label: 'Cancel',
+                variant: ButtonVariant.ghost,
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            const SizedBox(width: AppDimensions.paddingMD),
+            Expanded(
+              child: AppButton(
+                label: 'Verify',
+                onPressed: _verifyOtp,
+                isLoading: _isLoading,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }

@@ -18,7 +18,7 @@ class ProviderEarningsScreen extends ConsumerWidget {
         backgroundColor: AppColors.background,
         appBar: AppBar(
           title: const Text('Earnings'),
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.primary, foregroundColor: Colors.white,
           actions: [
             Padding(
               padding: const EdgeInsets.only(right: AppDimensions.paddingMD),

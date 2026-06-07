@@ -79,7 +79,7 @@ class NotificationScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Notifications'),
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
         scrolledUnderElevation: 0,
         actions: [
           userAsync.when(

@@ -26,7 +26,7 @@ class PublicProviderProfileScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Provider Profile'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
       ),
       body: providerAsync.when(
         data: (provider) {
@@ -115,6 +115,7 @@ class PublicProviderProfileScreen extends ConsumerWidget {
                           Expanded(
                             child: AppButton(
                               label: 'Message',
+                              variant: ButtonVariant.secondary,
                               icon: Icons.chat_bubble_outline_rounded,
                               onPressed: () async {
                                 showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
@@ -131,6 +132,16 @@ class PublicProviderProfileScreen extends ConsumerWidget {
                                     SnackbarHelper.error(context, 'Failed to start chat: $e');
                                   }
                                 }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: AppDimensions.paddingMD),
+                          Expanded(
+                            child: AppButton(
+                              label: 'Book Now',
+                              icon: Icons.calendar_month_rounded,
+                              onPressed: () {
+                                context.push('/client/book-provider/${provider.uid}');
                               },
                             ),
                           ),

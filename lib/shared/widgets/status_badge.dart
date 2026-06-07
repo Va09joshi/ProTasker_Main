@@ -10,6 +10,7 @@ class StatusBadge extends StatelessWidget {
   Color _color() {
     switch (status) {
       case BookingStatus.pending:
+      case BookingStatus.proposal:
         return AppColors.statusPending;
       case BookingStatus.accepted:
       case BookingStatus.onTheWay:

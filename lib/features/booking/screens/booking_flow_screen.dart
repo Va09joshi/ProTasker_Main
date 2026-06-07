@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -142,6 +143,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
         proofImages: [],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        otp: (Random().nextInt(9000) + 1000).toString(),
       );
 
       batch.set(bookingRef, booking.toMap());
@@ -184,7 +186,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
         backgroundColor: AppColors.background,
         appBar: AppBar(
           title: const Text('Book Service'),
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.primary, foregroundColor: Colors.white,
           leading: IconButton(
             icon: const Icon(Icons.close_rounded),
             onPressed: () => context.pop(),

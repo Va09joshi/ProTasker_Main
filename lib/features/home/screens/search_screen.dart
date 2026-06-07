@@ -15,17 +15,20 @@ class RecentSearchesNotifier extends Notifier<List<String>> {
 }
 final recentSearchesProvider = NotifierProvider<RecentSearchesNotifier, List<String>>(RecentSearchesNotifier.new);
 
-final searchProvider = FutureProvider.autoDispose.family<List<ServiceModel>, String>((ref, query) async {
+final searchProvider = FutureProvider.autoDispose.family<List<UserModel>, String>((ref, query) async {
   if (query.trim().isEmpty) return [];
   
+  final queryLower = query.toLowerCase().trim();
   final snapshot = await FirebaseFirestore.instance
-      .collection('services')
-      .where('isActive', isEqualTo: true)
-      .where('title', isGreaterThanOrEqualTo: query)
-      .where('title', isLessThan: '${query}z')
+      .collection('users')
+      .where('role', isEqualTo: 'provider')
       .get();
       
-  return snapshot.docs.map((doc) => ServiceModel.fromFirestore(doc)).toList();
+  return snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).where((user) {
+    final nameMatch = user.name.toLowerCase().contains(queryLower);
+    final serviceMatch = user.offeredServices?.any((s) => s.toLowerCase().contains(queryLower)) ?? false;
+    return nameMatch || serviceMatch;
+  }).toList();
 });
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -89,10 +92,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        titleSpacing: 0,
-        backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.textPrimary),
+          onPressed: () => context.pop(),
+        ),
+        titleSpacing: 8,
+        backgroundColor: AppColors.background,
+        surfaceTintColor: Colors.transparent,
+        foregroundColor: AppColors.textPrimary,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         title: Padding(
-          padding: const EdgeInsets.only(right: AppDimensions.paddingLG),
+          padding: const EdgeInsets.only(right: AppDimensions.paddingMD),
           child: AppTextField(
             controller: _controller,
             label: 'Search for services...',
@@ -162,16 +173,78 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           ],
           const Text('Browse Categories', style: AppTextStyles.headingLarge),
           const SizedBox(height: AppDimensions.paddingMD),
-          Wrap(
-            spacing: 8.0,
-            runSpacing: 8.0,
-            children: ServiceCategory.values.map((category) {
-              return CategoryChip(
-                category: category,
-                isSelected: false,
-                onTap: () => context.push('/services?category=${category.name}'),
-              );
-            }).toList(),
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: 0.0,
+              runSpacing: 20.0,
+              children: ServiceCategory.values.map((category) {
+                return SizedBox(
+                  width: (MediaQuery.of(context).size.width - (AppDimensions.paddingLG * 2) - 32) / 3.1,
+                  child: _buildCategoryGridItem(category, context),
+                );
+              }).toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryGridItem(ServiceCategory category, BuildContext context) {
+    String label;
+    
+    switch (category) {
+      case ServiceCategory.cleaning: label = 'Cleaning'; break;
+      case ServiceCategory.plumbing: label = 'Plumbing'; break;
+      case ServiceCategory.electrical: label = 'Electrical'; break;
+      case ServiceCategory.painting: label = 'Painting'; break;
+      case ServiceCategory.carpentry: label = 'Carpentry'; break;
+      case ServiceCategory.appliance: label = 'Appliance'; break;
+      case ServiceCategory.shifting: label = 'Moving'; break;
+      case ServiceCategory.other: label = 'Handyman'; break;
+    }
+
+    return GestureDetector(
+      onTap: () {
+        context.go('/client/category-providers/${category.name}');
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 90,
+            height: 90,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+              border: Border.all(color: AppColors.border, width: 1.5),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.textPrimary.withValues(alpha: 0.03),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Image.asset(
+              'assets/icons/category/${category.name}.png',
+              fit: BoxFit.contain,
+              errorBuilder: (_, __, ___) => const Icon(Icons.build_circle_outlined, color: AppColors.textTertiary),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            label,
+            style: AppTextStyles.labelLarge.copyWith(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ],
       ),
@@ -205,25 +278,55 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           );
         }
         
-        return GridView.builder(
+        return ListView.separated(
           physics: const AlwaysScrollableScrollPhysics(),
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: EdgeInsets.symmetric(
             horizontal: MediaQuery.of(context).size.width > 600 ? 32.0 : AppDimensions.paddingLG,
             vertical: AppDimensions.paddingMD,
           ),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: AppDimensions.paddingMD,
-            crossAxisSpacing: AppDimensions.paddingMD,
-            childAspectRatio: 0.75,
-          ),
           itemCount: results.length,
+          separatorBuilder: (_, __) => const SizedBox(height: AppDimensions.paddingMD),
           itemBuilder: (context, index) {
-            final service = results[index];
-            return ServiceCard(
-              service: service,
-              onTap: () => context.push('/service/${service.id}'),
+            final provider = results[index];
+            return Container(
+              padding: const EdgeInsets.all(AppDimensions.paddingMD),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                border: Border.all(color: AppColors.border, width: AppDimensions.cardBorderWidth),
+                boxShadow: [
+                  BoxShadow(color: AppColors.textPrimary.withValues(alpha: 0.02), blurRadius: 8, offset: const Offset(0, 2)),
+                ],
+              ),
+              child: Row(
+                children: [
+                  AppAvatar(name: provider.name, imageUrl: provider.profilePhoto, size: 56),
+                  const SizedBox(width: AppDimensions.paddingMD),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(provider.name, style: AppTextStyles.headingMedium),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            const Icon(Icons.star_rounded, color: AppColors.warning, size: 16),
+                            const SizedBox(width: 4),
+                            Text(provider.rating.toStringAsFixed(1), style: AppTextStyles.labelLarge),
+                            Text(' (${provider.totalReviews})', style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  AppButton(
+                    label: 'Book',
+                    onPressed: () => context.push('/client/book-provider/${provider.uid}'),
+                    fullWidth: false,
+                  ),
+                ],
+              ),
             );
           },
         );

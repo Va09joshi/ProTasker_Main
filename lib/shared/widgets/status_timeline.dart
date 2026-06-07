@@ -8,6 +8,7 @@ class StatusTimeline extends StatelessWidget {
 
   int get _currentIndex {
     switch (currentStatus) {
+      case BookingStatus.proposal:
       case BookingStatus.pending: return 0;
       case BookingStatus.accepted: return 1;
       case BookingStatus.onTheWay: return 2;

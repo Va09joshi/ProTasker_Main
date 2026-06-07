@@ -6,6 +6,7 @@ import 'service_model.dart';
 
 enum BookingStatus {
   pending,
+  proposal,
   accepted,
   rejected,
   onTheWay,
@@ -39,6 +40,7 @@ class BookingModel {
   final bool clientReviewed;
   final DateTime createdAt;
   final DateTime updatedAt;
+  final String? otp;
 
   BookingModel({
     required this.id,
@@ -65,6 +67,7 @@ class BookingModel {
     this.clientReviewed = false,
     required this.createdAt,
     required this.updatedAt,
+    this.otp,
   });
 
   factory BookingModel.fromFirestore(DocumentSnapshot doc) {
@@ -109,6 +112,7 @@ class BookingModel {
       clientReviewed: map['clientReviewed'] as bool? ?? false,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      otp: map['otp'] as String?,
     );
   }
 
@@ -138,6 +142,7 @@ class BookingModel {
       'clientReviewed': clientReviewed,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
+      'otp': otp,
     };
   }
 
@@ -166,6 +171,7 @@ class BookingModel {
     bool? clientReviewed,
     DateTime? createdAt,
     DateTime? updatedAt,
+    String? otp,
   }) {
     return BookingModel(
       id: id ?? this.id,
@@ -192,6 +198,7 @@ class BookingModel {
       clientReviewed: clientReviewed ?? this.clientReviewed,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      otp: otp ?? this.otp,
     );
   }
 }

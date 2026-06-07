@@ -111,7 +111,7 @@ final jobProposalsProvider = StreamProvider.family<List<BookingModel>, String>((
       .collection('bookings')
       .where('clientId', isEqualTo: user.uid)
       .where('serviceId', isEqualTo: jobId)
-      .where('status', isEqualTo: BookingStatus.pending.name)
+      .where('status', isEqualTo: BookingStatus.proposal.name)
       .snapshots()
       .map((snapshot) => snapshot.docs.map((doc) => BookingModel.fromFirestore(doc)).toList());
 });

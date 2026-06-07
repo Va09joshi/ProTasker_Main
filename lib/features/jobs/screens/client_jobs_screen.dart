@@ -18,7 +18,7 @@ class ClientJobsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('My Job Posts', style: AppTextStyles.headingMedium),
         centerTitle: true,
-        backgroundColor: AppColors.surface,
+        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
@@ -139,7 +139,7 @@ class ClientJobsScreen extends ConsumerWidget {
               ),
             );
           },
-          loading: () => const LoadingShimmer(type: ShimmerType.list),
+          loading: () => const Center(child: CircularProgressIndicator()),
           error: (err, _) => Padding(
             padding: const EdgeInsets.all(AppDimensions.paddingLG),
             child: ErrorView(

@@ -21,6 +21,7 @@ class BookingCard extends StatelessWidget {
   Color _getStatusColor(BookingStatus status) {
     switch (status) {
       case BookingStatus.pending:
+      case BookingStatus.proposal:
         return AppColors.statusPending;
       case BookingStatus.accepted:
       case BookingStatus.onTheWay:
@@ -163,7 +164,7 @@ class BookingCard extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '\$${booking.netPrice.toStringAsFixed(0)}',
+                            '₹${booking.netPrice.toStringAsFixed(0)}',
                             style: AppTextStyles.headingMedium.copyWith(color: AppColors.textPrimary),
                           ),
                         ],

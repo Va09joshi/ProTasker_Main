@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,7 +6,6 @@ import '../../../core/theme/theme.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../shared/models/models.dart';
 import '../../booking/repositories/booking_repository.dart';
-import '../repositories/job_repository.dart';
 import '../models/job_post.dart';
 import 'package:uuid/uuid.dart';
 
@@ -75,7 +75,7 @@ class _AcceptJobSheetState extends ConsumerState<AcceptJobSheet> {
         ),
         scheduledAt: _selectedDate,
         timeSlot: _selectedTimeSlot,
-        status: BookingStatus.pending, // Pending Client Approval
+        status: BookingStatus.proposal, // Provider Proposal
         address: Address(
           street: 'Provided by Client',
           city: '',
@@ -91,6 +91,7 @@ class _AcceptJobSheetState extends ConsumerState<AcceptJobSheet> {
         proofImages: [],
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        otp: (Random().nextInt(9000) + 1000).toString(),
       );
 
       // Create Booking
@@ -105,7 +106,7 @@ class _AcceptJobSheetState extends ConsumerState<AcceptJobSheet> {
           const SnackBar(content: Text('Proposal submitted successfully! Waiting for client approval.')),
         );
         // Navigate to provider bookings or keep them on the job feed
-        context.go('/provider/my-jobs');
+        context.go('/provider/jobs');
       }
     } catch (e) {
       if (mounted) {
@@ -166,7 +167,7 @@ class _AcceptJobSheetState extends ConsumerState<AcceptJobSheet> {
 
                 AppTextField(
                   controller: _priceController,
-                  label: 'Estimated Price (\$)',
+                  label: 'Estimated Price (₹)',
                   keyboardType: TextInputType.number,
                   validator: (val) {
                     if (val == null || val.isEmpty) return 'Enter a price';

@@ -7,15 +7,20 @@ final authStateProvider = StreamProvider<User?>((ref) {
   return FirebaseAuth.instance.authStateChanges();
 });
 
-final currentUserProvider = FutureProvider<UserModel?>((ref) async {
+final currentUserProvider = StreamProvider<UserModel?>((ref) {
   final user = ref.watch(authStateProvider).value;
-  if (user == null) return null;
+  if (user == null) return Stream.value(null);
 
-  final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-  if (doc.exists) {
-    return UserModel.fromFirestore(doc);
-  }
-  return null;
+  return FirebaseFirestore.instance
+      .collection('users')
+      .doc(user.uid)
+      .snapshots()
+      .map((doc) {
+    if (doc.exists) {
+      return UserModel.fromFirestore(doc);
+    }
+    return null;
+  });
 });
 
 final publicProviderProfileProvider = FutureProvider.family<UserModel?, String>((ref, uid) async {

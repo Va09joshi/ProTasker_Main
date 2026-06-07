@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -27,7 +26,7 @@ class JobDetailScreen extends ConsumerWidget {
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
       appBar: AppBar(
         title: const Text('Job Details'),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: jobAsync.when(
@@ -48,14 +47,8 @@ class JobDetailScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppDimensions.paddingLG),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.darkSurface : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.primary.withValues(alpha: 0.05),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                    border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.0),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -74,19 +67,39 @@ class JobDetailScreen extends ConsumerWidget {
                               style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
                             ),
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: job.status == 'open' ? AppColors.success.withValues(alpha: 0.1) : AppColors.warning.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
-                            ),
-                            child: Text(
-                              job.status.toUpperCase(),
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: job.status == 'open' ? AppColors.success : AppColors.warning,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                          Builder(
+                            builder: (context) {
+                              String label;
+                              Color color;
+                              if (job.status == 'open') {
+                                label = 'OPEN';
+                                color = AppColors.success;
+                              } else if (job.status == 'in_progress') {
+                                label = 'HIRED';
+                                color = AppColors.primary;
+                              } else if (job.status == 'completed') {
+                                label = 'COMPLETED';
+                                color = AppColors.textTertiary;
+                              } else {
+                                label = job.status.replaceAll('_', ' ').toUpperCase();
+                                color = AppColors.warning;
+                              }
+                              
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
+                                ),
+                                child: Text(
+                                  label,
+                                  style: AppTextStyles.labelSmall.copyWith(
+                                    color: color,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            }
                           ),
                         ],
                       ),
@@ -126,14 +139,8 @@ class JobDetailScreen extends ConsumerWidget {
                       padding: const EdgeInsets.all(AppDimensions.paddingLG),
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.darkSurface : Colors.white,
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF4361EE).withValues(alpha: 0.08),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.0),
                       ),
                       child: Row(
                         children: [
@@ -175,20 +182,16 @@ class JobDetailScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppDimensions.paddingLG),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.darkSurface : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                    border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.0),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: const Color(0xFFFF9F1C).withValues(alpha: 0.15), shape: BoxShape.circle),
-                            child: const Icon(Icons.description_rounded, color: Color(0xFFFF9F1C), size: 18),
-                          ),
-                          const SizedBox(width: 12),
+                          Icon(Icons.description_outlined, color: isDark ? Colors.white70 : AppColors.primary, size: 24),
+                          const SizedBox(width: 10),
                           const Text('Problem Description', style: AppTextStyles.headingMedium),
                         ],
                       ),
@@ -244,20 +247,16 @@ class JobDetailScreen extends ConsumerWidget {
                   padding: const EdgeInsets.all(AppDimensions.paddingLG),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.darkSurface : Colors.white,
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppColors.border),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                    border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.0),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(color: const Color(0xFFF72585).withValues(alpha: 0.15), shape: BoxShape.circle),
-                            child: const FaIcon(FontAwesomeIcons.locationDot, size: 16, color: Color(0xFFF72585)),
-                          ),
-                          const SizedBox(width: 12),
+                          Icon(Icons.location_on_outlined, color: isDark ? Colors.white70 : AppColors.primary, size: 24),
+                          const SizedBox(width: 10),
                           const Text('Location', style: AppTextStyles.headingMedium),
                         ],
                       ),
@@ -289,13 +288,14 @@ class JobDetailScreen extends ConsumerWidget {
                       const SizedBox(height: AppDimensions.paddingLG),
                       // Map View
                       Container(
-                        height: 180,
+                        height: 220,
                         width: double.infinity,
                         decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.0),
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(11),
                           child: GoogleMap(
                             initialCameraPosition: CameraPosition(
                               target: LatLng(job.latitude, job.longitude),
@@ -340,7 +340,7 @@ class JobDetailScreen extends ConsumerWidget {
           onRetry: () => ref.refresh(jobDetailProvider(jobId)),
         ),
       ),
-      bottomNavigationBar: (jobAsync.value != null && currentUserAsync.value?.role == UserRole.provider && currentUserAsync.value?.uid != jobAsync.value?.clientId) ? Container(
+      bottomNavigationBar: (jobAsync.value != null && currentUserAsync.value?.role == UserRole.provider && currentUserAsync.value?.uid != jobAsync.value?.clientId && jobAsync.value!.status == 'open') ? Container(
         padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG, vertical: AppDimensions.paddingMD),
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkSurface : AppColors.surface,
@@ -402,7 +402,7 @@ class JobDetailScreen extends ConsumerWidget {
                   Expanded(
                     flex: 1,
                     child: AppButton(
-                      label: 'Accept',
+                      label: 'Send Proposal',
                       onPressed: () {
                         final client = clientAsync.value;
                         if (client == null) {
@@ -505,9 +505,7 @@ class _ProposalCard extends ConsumerWidget {
             children: [
               GestureDetector(
                 onTap: () {
-                  // Navigate to provider profile (assuming we have one or will create one)
-                  // context.push('/provider-profile/${booking.providerId}');
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Provider Profile coming soon!')));
+                  context.push('/provider/${booking.providerId}');
                 },
                 child: AppAvatar(name: booking.providerName, imageUrl: booking.providerPhoto, size: 56),
               ),
@@ -519,7 +517,7 @@ class _ProposalCard extends ConsumerWidget {
                     Text(booking.providerName, style: AppTextStyles.labelLarge),
                     const SizedBox(height: 4),
                     Text(
-                      'Est. Price: \$${booking.grossPrice.toStringAsFixed(2)}',
+                      'Est. Price: ₹${booking.grossPrice.toStringAsFixed(2)}',
                       style: AppTextStyles.bodyMedium.copyWith(color: AppColors.success, fontWeight: FontWeight.bold),
                     ),
                   ],
@@ -555,7 +553,7 @@ class _ProposalCard extends ConsumerWidget {
                     try {
                       final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(booking.clientId, booking.providerId, booking.serviceId);
                       if (context.mounted) Navigator.pop(context);
-                      if (context.mounted) context.push('/client/chat/$chatId');
+                      if (context.mounted) context.push('/chat/$chatId');
                     } catch (e) {
                       if (context.mounted) {
                         Navigator.pop(context);
@@ -576,7 +574,7 @@ class _ProposalCard extends ConsumerWidget {
                       context: context,
                       builder: (ctx) => AlertDialog(
                         title: const Text('Accept Proposal?'),
-                        content: Text('Are you sure you want to hire ${booking.providerName} for \$${booking.grossPrice}?'),
+                        content: Text('Are you sure you want to hire ${booking.providerName} for ₹${booking.grossPrice}?'),
                         actions: [
                           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
                           AppButton(label: 'Accept', onPressed: () => Navigator.pop(ctx, true)),
@@ -587,7 +585,7 @@ class _ProposalCard extends ConsumerWidget {
                     if (confirm == true && context.mounted) {
                       showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
                       try {
-                        await ref.read(bookingRepositoryProvider).acceptProposal(booking.id, jobId);
+                        await ref.read(bookingRepositoryProvider).acceptProposal(booking.id, jobId, booking.clientId);
                         if (context.mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proposal Accepted! Provider has been notified.')));
@@ -614,7 +612,7 @@ class _ProposalCard extends ConsumerWidget {
                     try {
                       final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(booking.clientId, booking.providerId, booking.serviceId);
                       if (context.mounted) Navigator.pop(context);
-                      if (context.mounted) context.push('/client/chat/$chatId');
+                      if (context.mounted) context.push('/chat/$chatId');
                     } catch (e) {
                       if (context.mounted) {
                         Navigator.pop(context);

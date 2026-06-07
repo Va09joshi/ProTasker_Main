@@ -12,7 +12,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
       appBar: AppBar(
         title: const Text('Privacy Policy', style: AppTextStyles.headingLarge),
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: false,
       ),

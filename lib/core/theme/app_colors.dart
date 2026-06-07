@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 
 class AppColors {
   // Brand - Minimal Professional Palette
-  static const Color primary = Color(0xFF0D7A4F); 
-  static const Color accent = Color(0xFF0D7A4F); // Using primary as accent for minimalism
-  static const Color background = Color(0xFFF8F9FA);
+  static const Color primary = Color(0xFF093C5D); 
+  static const Color secondary = Color(0xFF3B7597);
+  static const Color accent = Color(0xFF2C3947);
+  static const Color background = Color(0xFFFFFFFF);
   static const Color surface = Color(0xFFFFFFFF);
   static const Color surfaceAlt = Color(0xFFF3F4F6); // Lighter gray for alt surfaces
 
@@ -28,7 +29,7 @@ class AppColors {
   // Booking status
   static const Color statusPending = Color(0xFFF59E0B);
   static const Color statusAccepted = Color(0xFF3B82F6);
-  static const Color statusActive = Color(0xFF0D7A4F);
+  static const Color statusActive = Color(0xFF093C5D);
   static const Color statusCompleted = Color(0xFF16A34A);
   static const Color statusCancelled = Color(0xFFDC2626);
 

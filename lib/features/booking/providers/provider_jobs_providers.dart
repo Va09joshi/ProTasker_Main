@@ -10,7 +10,7 @@ final providerRequestsStreamProvider = StreamProvider.autoDispose<List<BookingMo
   return FirebaseFirestore.instance
       .collection('bookings')
       .where('providerId', isEqualTo: user.uid)
-      .where('status', isEqualTo: BookingStatus.pending.name)
+      .where('status', whereIn: [BookingStatus.pending.name, BookingStatus.proposal.name])
       .orderBy('createdAt', descending: true)
       .snapshots()
       .map((snapshot) => snapshot.docs.map((doc) => BookingModel.fromFirestore(doc)).toList());

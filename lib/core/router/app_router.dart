@@ -34,6 +34,8 @@ import '../../features/booking/screens/booking_detail_screen.dart';
 import '../../features/booking/screens/review_screen.dart';
 import '../../features/profile/screens/notification_screen.dart';
 import '../../features/location/screens/map_picker_screen.dart';
+import '../../features/services/screens/category_providers_screen.dart';
+import '../../features/booking/screens/direct_booking_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _clientShellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'clientShell');
@@ -177,6 +179,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: RouteNames.postJob,
             builder: (context, state) => const PostJobScreen(),
           ),
+          GoRoute(
+            path: '/client/category-providers/:category',
+            name: 'categoryProviders',
+            pageBuilder: (context, state) {
+              final category = state.pathParameters['category']!;
+              return _buildPageWithFadeTransition(context, state, CategoryProvidersScreen(category: category));
+            },
+          ),
         ],
       ),
 
@@ -261,6 +271,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return PublicProviderProfileScreen(providerId: id);
+        },
+      ),
+      GoRoute(
+        path: '/client/book-provider/:id',
+        name: 'bookProvider',
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          final category = state.uri.queryParameters['category'];
+          return DirectBookingScreen(providerId: id, category: category);
         },
       ),
       GoRoute(

@@ -149,7 +149,7 @@ class _ReviewScreenState extends ConsumerState<ReviewScreen> {
         backgroundColor: AppColors.background,
         appBar: AppBar(
           title: const Text('Leave a Review'),
-          backgroundColor: Colors.transparent,
+          backgroundColor: AppColors.primary, foregroundColor: Colors.white,
         ),
         body: SafeArea(
           child: bookingAsync.when(

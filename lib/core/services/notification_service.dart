@@ -1,113 +1,68 @@
 import 'dart:convert';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:go_router/go_router.dart';
-import '../router/app_router.dart';
-import '../../shared/models/models.dart';
-
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Handle background messages
-}
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class NotificationService {
-  static final NotificationService _instance = NotificationService._internal();
-  factory NotificationService() => _instance;
-  NotificationService._internal();
+  static const MethodChannel _channel = MethodChannel('com.protasker/pusher');
+  static const String _instanceId = 'ae015999-12be-4b38-bdbc-15ad30dfd991';
 
-  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-
-  Future<void> initialize(String? currentUserId) async {
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const darwinInit = DarwinInitializationSettings();
-    const initSettings = InitializationSettings(android: androidInit, iOS: darwinInit);
-
-    await _localNotifications.initialize(
-      settings: initSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        if (response.payload != null) {
-          _handlePayload(jsonDecode(response.payload!));
-        }
-      },
-    );
-
-    final settings = await _fcm.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      if (currentUserId != null) {
-        final token = await _fcm.getToken();
-        if (token != null) {
-          try {
-            await FirebaseFirestore.instance.collection('users').doc(currentUserId).update({'fcmToken': token});
-          } catch (_) {}
-        }
-      }
-
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        _showLocalNotification(message);
-      });
-
-      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        if (message.data.isNotEmpty) {
-          _handlePayload(message.data);
-        }
-      });
-
-      final initialMessage = await _fcm.getInitialMessage();
-      if (initialMessage != null && initialMessage.data.isNotEmpty) {
-        Future.delayed(const Duration(seconds: 1), () {
-          _handlePayload(initialMessage.data);
-        });
-      }
+  /// Call this when the user logs in to subscribe their device to their unique ID
+  static Future<void> subscribeToUser(String uid) async {
+    try {
+      await _channel.invokeMethod('setInterest', {'interest': 'user-$uid'});
+    } catch (e) {
+      print('Failed to subscribe to pusher interest: $e');
     }
   }
 
-  Future<void> _showLocalNotification(RemoteMessage message) async {
-    final notification = message.notification;
-    if (notification == null) return;
-
-    const androidDetails = AndroidNotificationDetails(
-      'protasker_channel',
-      'ProTasker Notifications',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
-    const platformDetails = NotificationDetails(android: androidDetails, iOS: DarwinNotificationDetails());
-
-    await _localNotifications.show(
-      id: notification.hashCode,
-      title: notification.title,
-      body: notification.body,
-      notificationDetails: platformDetails,
-      payload: jsonEncode(message.data),
-    );
+  /// Call this when the user logs out
+  static Future<void> clearSubscriptions() async {
+    try {
+      await _channel.invokeMethod('clearInterests');
+    } catch (e) {
+      print('Failed to clear pusher interests: $e');
+    }
   }
 
-  void _handlePayload(Map<String, dynamic> payload) {
-    final context = rootNavigatorKey.currentContext;
-    if (context == null) return;
+  /// Sends a push notification to a specific user using Pusher Beams Publish API
+  static Future<void> sendNotification({
+    required String targetUid,
+    required String title,
+    required String body,
+  }) async {
+    try {
+      final secretKey = dotenv.env['PUSHER_BEAMS_SECRET_KEY'];
+      
+      if (secretKey == null || secretKey.isEmpty || secretKey == 'YOUR_PUSHER_SECRET_KEY_HERE') {
+        print('WARNING: PUSHER_BEAMS_SECRET_KEY is not set in .env file. Notification will not be sent.');
+        return;
+      }
 
-    final typeStr = payload['type'] as String?;
-    final bookingId = payload['bookingId'] as String?;
-    final chatId = payload['chatId'] as String?;
+      final url = Uri.parse('https://$_instanceId.pushnotifications.pusher.com/publish_api/v1/instances/$_instanceId/publishes');
+      
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $secretKey',
+        },
+        body: jsonEncode({
+          'interests': ['user-$targetUid'],
+          'fcm': {
+            'notification': {
+              'title': title,
+              'body': body,
+            }
+          }
+        }),
+      );
 
-    if (typeStr == NotificationType.newMessage.name && chatId != null) {
-      context.push('/chat/$chatId');
-    } else if (bookingId != null && 
-        (typeStr == NotificationType.bookingRequest.name || 
-         typeStr == NotificationType.bookingAccepted.name || 
-         typeStr == NotificationType.bookingCompleted.name)) {
-      context.push('/booking/$bookingId');
-    } else {
-      context.push('/notifications');
+      if (response.statusCode != 200) {
+        print('Failed to send notification: ${response.body}');
+      }
+    } catch (e) {
+      print('Error sending push notification: $e');
     }
   }
 }

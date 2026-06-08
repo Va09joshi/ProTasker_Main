@@ -11,6 +11,7 @@ import '../../chat/repositories/chat_repository.dart';
 import '../../../shared/models/models.dart';
 import '../../booking/repositories/booking_repository.dart';
 import 'accept_job_sheet.dart';
+import '../../../core/services/notification_service.dart';
 
 class JobDetailScreen extends ConsumerWidget {
   final String jobId;
@@ -586,6 +587,13 @@ class _ProposalCard extends ConsumerWidget {
                       showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
                       try {
                         await ref.read(bookingRepositoryProvider).acceptProposal(booking.id, jobId, booking.clientId);
+                        
+                        await NotificationService.sendNotification(
+                          targetUid: booking.providerId,
+                          title: 'Proposal Accepted!',
+                          body: 'The client has accepted your proposal. Please proceed to the location.',
+                        );
+
                         if (context.mounted) {
                           Navigator.pop(context);
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proposal Accepted! Provider has been notified.')));

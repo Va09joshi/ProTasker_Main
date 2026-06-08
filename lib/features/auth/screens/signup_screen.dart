@@ -129,7 +129,27 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     label: 'Password',
                     prefixIcon: const Icon(Icons.lock_outline, size: 20),
                     obscure: true,
-                    validator: (value) => value == null || value.length < 6 ? 'Password too short' : null,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Enter a password';
+                      }
+                      if (value.length < 8) {
+                        return 'Must be at least 8 characters long';
+                      }
+                      if (!RegExp(r'[A-Z]').hasMatch(value)) {
+                        return 'Must contain at least one uppercase letter';
+                      }
+                      if (!RegExp(r'[a-z]').hasMatch(value)) {
+                        return 'Must contain at least one lowercase letter';
+                      }
+                      if (!RegExp(r'[0-9]').hasMatch(value)) {
+                        return 'Must contain at least one number';
+                      }
+                      if (!RegExp(r'[!@#\$&*~]').hasMatch(value)) {
+                        return 'Must contain at least one special character (!@#\$&*~)';
+                      }
+                      return null;
+                    },
                     enabled: !isLoading,
                   ),
                   const SizedBox(height: AppDimensions.paddingMD),

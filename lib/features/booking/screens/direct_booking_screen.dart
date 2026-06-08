@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/theme.dart';
 import '../../../shared/models/models.dart';
+import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../shared/providers/user_session_provider.dart';
 import '../repositories/booking_repository.dart';
@@ -60,7 +62,7 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
   Future<void> _submitBooking(UserModel client, UserModel provider) async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a category')));
+      SnackbarHelper.warning(context, 'Please select a category');
       return;
     }
 
@@ -102,17 +104,20 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
 
       await ref.read(bookingRepositoryProvider).createBooking(booking);
 
+      // Notify the provider
+      await NotificationService.sendNotification(
+        targetUid: provider.uid,
+        title: 'New Booking Request',
+        body: '${client.name} has requested your services for ${booking.serviceCategory.name}.',
+      );
+
       if (mounted) {
-        context.pop(); // Go back
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking request sent successfully!')),
-        );
+        context.pop();
+        SnackbarHelper.success(context, 'Booking Request Sent! Provider will be notified.');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to submit booking: $e')),
-        );
+        SnackbarHelper.error(context, 'Failed to send booking request. Please try again.');
       }
     } finally {
       if (mounted) {
@@ -385,6 +390,7 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
                         maxLines: 4,
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) return 'Please describe the problem';
+                          if (val.trim().length < 10) return 'Description must be at least 10 characters';
                           return null;
                         },
                       ),

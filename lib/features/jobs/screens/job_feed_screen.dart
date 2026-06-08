@@ -10,6 +10,7 @@ import '../../../shared/providers/user_session_provider.dart';
 import '../../chat/repositories/chat_repository.dart';
 import '../../../shared/models/models.dart';
 import '../models/job_post.dart';
+import '../../../core/utils/snackbar_helper.dart';
 
 class JobFeedScreen extends ConsumerWidget {
   const JobFeedScreen({super.key});
@@ -208,9 +209,7 @@ class _JobFeedCard extends ConsumerWidget {
                     } catch (e) {
                       if (context.mounted) {
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed to start chat')),
-                        );
+                        SnackbarHelper.error(context, 'Failed to start chat. Please try again.');
                       }
                     }
                   },

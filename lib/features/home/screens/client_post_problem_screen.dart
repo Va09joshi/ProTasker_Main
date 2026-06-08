@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/theme.dart';
 import '../../../shared/providers/user_session_provider.dart';
 import '../../../shared/models/models.dart';
+import '../../../core/utils/snackbar_helper.dart';
 
 class ClientPostProblemScreen extends ConsumerStatefulWidget {
   const ClientPostProblemScreen({super.key});
@@ -60,16 +61,12 @@ class _ClientPostProblemScreenState extends ConsumerState<ClientPostProblemScree
       await newProblemRef.set(taskRequest.toMap());
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Problem posted successfully! Providers nearby will see it.')),
-        );
+        SnackbarHelper.success(context, 'Problem posted successfully! Providers nearby will see it.');
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to post problem: $e')),
-        );
+        SnackbarHelper.error(context, 'Failed to post problem. Please try again.');
       }
     } finally {
       if (mounted) {
@@ -109,7 +106,11 @@ class _ClientPostProblemScreenState extends ConsumerState<ClientPostProblemScree
                   labelText: 'Problem Title',
                   hintText: 'E.g., Plumber needed for leaking pipe',
                 ),
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Title is required';
+                  if (v.trim().length < 5) return 'Title must be at least 5 characters';
+                  return null;
+                },
               ),
               const SizedBox(height: AppDimensions.paddingLG),
               TextFormField(
@@ -119,7 +120,11 @@ class _ClientPostProblemScreenState extends ConsumerState<ClientPostProblemScree
                   labelText: 'Description',
                   hintText: 'Provide details about the issue...',
                 ),
-                validator: (v) => v == null || v.isEmpty ? 'Required' : null,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Description is required';
+                  if (v.trim().length < 10) return 'Description must be at least 10 characters';
+                  return null;
+                },
               ),
               const SizedBox(height: AppDimensions.paddingXL),
               SizedBox(

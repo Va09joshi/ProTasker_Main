@@ -606,11 +606,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
             'address.lat': pos.latitude,
             'address.lng': pos.longitude,
           });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Location updated to ${pm.locality}')),
-            );
-          }
+            SnackbarHelper.success(context, 'Location updated to ${pm.locality}');
         } else {
           if (mounted) _promptForLocation(context, uid);
         }

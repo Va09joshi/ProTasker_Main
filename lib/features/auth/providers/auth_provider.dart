@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/models.dart';
 import '../repositories/auth_repository.dart';
+import '../../../core/services/notification_service.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
@@ -18,7 +19,8 @@ class AuthNotifier extends AsyncNotifier<void> {
   Future<void> login(String email, String password) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await _repository.signInWithEmail(email, password);
+      final user = await _repository.signInWithEmail(email, password);
+      await NotificationService.subscribeToUser(user.uid);
     });
   }
 
@@ -31,14 +33,16 @@ class AuthNotifier extends AsyncNotifier<void> {
   }) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await _repository.signUpWithEmail(name, email, phone, password, role);
+      final user = await _repository.signUpWithEmail(name, email, phone, password, role);
+      await NotificationService.subscribeToUser(user.uid);
     });
   }
 
   Future<void> loginWithGoogle() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      await _repository.signInWithGoogle();
+      final user = await _repository.signInWithGoogle();
+      await NotificationService.subscribeToUser(user.uid);
     });
   }
 
@@ -46,6 +50,7 @@ class AuthNotifier extends AsyncNotifier<void> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await _repository.signOut();
+      await NotificationService.clearSubscriptions();
     });
   }
 

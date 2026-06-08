@@ -8,6 +8,7 @@ import '../../../shared/models/models.dart';
 import '../../booking/repositories/booking_repository.dart';
 import '../models/job_post.dart';
 import 'package:uuid/uuid.dart';
+import '../../../core/services/notification_service.dart';
 
 class AcceptJobSheet extends ConsumerStatefulWidget {
   final JobPost job;
@@ -96,6 +97,13 @@ class _AcceptJobSheetState extends ConsumerState<AcceptJobSheet> {
 
       // Create Booking
       await ref.read(bookingRepositoryProvider).createBooking(booking);
+
+      // Notify the client
+      await NotificationService.sendNotification(
+        targetUid: widget.job.clientId,
+        title: 'New Proposal Received',
+        body: '${widget.provider.name} has sent a proposal for "${widget.job.title}".',
+      );
 
       // We do not change the job status to in_progress yet, because multiple providers can submit proposals.
       // Once the client accepts a specific booking, the job becomes in_progress.

@@ -7,6 +7,7 @@ import '../../../shared/models/models.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../shared/providers/user_session_provider.dart';
 import '../providers/category_providers_provider.dart';
+import '../../../core/utils/snackbar_helper.dart';
 
 class CategoryProvidersScreen extends ConsumerWidget {
   final String category;
@@ -185,8 +186,7 @@ class CategoryProviderCard extends StatelessWidget {
                   label: 'View Profile',
                   variant: ButtonVariant.secondary,
                   onPressed: () {
-                    // Navigate to provider profile (stub)
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Provider Profile coming soon!')));
+                    context.push('/provider/${provider.uid}');
                   },
                 ),
               ),

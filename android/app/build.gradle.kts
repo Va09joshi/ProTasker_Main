@@ -58,6 +58,9 @@ flutter {
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
     implementation(platform("com.google.firebase:firebase-bom:33.0.0"))
+    implementation("com.google.firebase:firebase-messaging:21.1.0")
+    implementation("com.google.firebase:firebase-iid:21.1.0")
+    implementation("com.pusher:push-notifications-android:1.9.0")
 }
 
 kotlin {

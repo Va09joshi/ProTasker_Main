@@ -7,7 +7,10 @@ import 'core/providers/app_provider_observer.dart';
 import 'core/router/app_router.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'features/profile/providers/profile_providers.dart';
+import 'core/services/notification_service.dart';
+import 'core/services/permission_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +48,15 @@ class _MyAppState extends ConsumerState<MyApp> {
   void initState() {
     super.initState();
     _loadTheme();
+    PermissionService.requestNotificationPermission();
+    PermissionService.requestLocationPermission();
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        NotificationService.subscribeToUser(user.uid);
+      } else {
+        NotificationService.clearSubscriptions();
+      }
+    });
   }
 
   Future<void> _loadTheme() async {

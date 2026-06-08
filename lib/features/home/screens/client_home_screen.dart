@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/theme.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/providers/user_session_provider.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../../../core/router/route_names.dart';
 import '../providers/home_providers.dart';
@@ -881,11 +882,7 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
             'address.lat': pos.latitude,
             'address.lng': pos.longitude,
           });
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Location updated to ${pm.locality}')),
-            );
-          }
+            SnackbarHelper.success(context, 'Location updated to ${pm.locality}');
         } else {
           if (mounted) _promptForLocation(context, uid);
         }

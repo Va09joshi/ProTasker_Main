@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/services/cloudinary_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/models.dart';
+import '../../../core/services/notification_service.dart';
 
 final chatRepositoryProvider = Provider((ref) => ChatRepository());
 
@@ -65,6 +66,14 @@ class ChatRepository {
         'lastMessageTime': FieldValue.serverTimestamp(),
         isClient ? 'providerUnread' : 'clientUnread': FieldValue.increment(1),
       });
+
+      // We can also trigger the notification here
+      final targetUid = isClient ? chat.providerId : chat.clientId;
+      await NotificationService.sendNotification(
+        targetUid: targetUid,
+        title: 'New message from ${message.senderName}',
+        body: message.type == MessageType.image ? '📸 Image' : message.content,
+      );
     }
 
     await batch.commit();

@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../../core/theme/theme.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/providers/user_session_provider.dart';
+import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/services/notification_service.dart';
 
 class ProviderJobBoardScreen extends ConsumerStatefulWidget {
   const ProviderJobBoardScreen({super.key});
@@ -13,7 +15,7 @@ class ProviderJobBoardScreen extends ConsumerStatefulWidget {
 }
 
 class _ProviderJobBoardScreenState extends ConsumerState<ProviderJobBoardScreen> {
-  Future<void> _applyForJob(String jobId) async {
+  Future<void> _applyForJob(String jobId, String clientId, String title) async {
     try {
       final user = ref.read(currentUserProvider).value;
       if (user == null) return;
@@ -23,17 +25,20 @@ class _ProviderJobBoardScreenState extends ConsumerState<ProviderJobBoardScreen>
         'assignedProviderId': user.uid,
         'updatedAt': Timestamp.now(),
       });
+
+      // Notify the client
+      await NotificationService.sendNotification(
+        targetUid: clientId,
+        title: 'New Connection',
+        body: '${user.name} has connected to your request "$title".',
+      );
       
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Applied successfully!')),
-        );
+        SnackbarHelper.success(context, 'Applied successfully!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to apply: $e')),
-        );
+        SnackbarHelper.error(context, 'Failed to apply. Please try again.');
       }
     }
   }
@@ -119,7 +124,7 @@ class _ProviderJobBoardScreenState extends ConsumerState<ProviderJobBoardScreen>
                           ),
                           const Spacer(),
                           ElevatedButton(
-                            onPressed: () => _applyForJob(job.id),
+                            onPressed: () => _applyForJob(job.id, job.clientId, job.title),
                             child: const Text('Connect'),
                           ),
                         ],

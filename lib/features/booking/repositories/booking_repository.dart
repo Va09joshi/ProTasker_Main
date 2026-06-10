@@ -24,27 +24,38 @@ class BookingRepository {
   }
 
   Future<void> acceptProposal(String acceptedBookingId, String jobId, String clientId) async {
-    final batch = _firestore.batch();
-
-    // Fetch all pending bookings for this job
-    final pendingBookings = await _firestore.collection(_collection)
+    final jobRef = _firestore.collection('jobs').doc(jobId);
+    
+    // Query pending bookings before transaction to get their references
+    final pendingBookingsQuery = await _firestore.collection(_collection)
         .where('clientId', isEqualTo: clientId)
         .where('serviceId', isEqualTo: jobId)
         .where('status', isEqualTo: BookingStatus.proposal.name)
         .get();
 
-    for (var doc in pendingBookings.docs) {
-      if (doc.id == acceptedBookingId) {
-        batch.update(doc.reference, {'status': BookingStatus.accepted.name});
-      } else {
-        batch.update(doc.reference, {'status': BookingStatus.rejected.name});
+    await _firestore.runTransaction((transaction) async {
+      final jobDoc = await transaction.get(jobRef);
+      if (!jobDoc.exists) throw Exception('Job not found');
+      if (jobDoc.data()?['status'] != 'open') {
+        throw Exception('This job is no longer open or has already been assigned.');
       }
-    }
 
-    // Update job status to 'in_progress'
-    final jobRef = _firestore.collection('jobs').doc(jobId);
-    batch.update(jobRef, {'status': 'in_progress'});
+      // Find the accepted booking doc to extract provider info if needed
+      // (For now just updating status)
+      
+      for (var doc in pendingBookingsQuery.docs) {
+        if (doc.id == acceptedBookingId) {
+          transaction.update(doc.reference, {'status': BookingStatus.accepted.name});
+        } else {
+          transaction.delete(doc.reference);
+        }
+      }
 
-    await batch.commit();
+      // Update job status
+      transaction.update(jobRef, {
+        'status': 'in_progress',
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
   }
 }

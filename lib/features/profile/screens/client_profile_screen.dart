@@ -19,6 +19,8 @@ import '../../jobs/models/job_post.dart';
 import 'package:intl/intl.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../core/router/route_names.dart';
+import '../../location/screens/map_picker_screen.dart';
 
 class ClientProfileScreen extends ConsumerStatefulWidget {
   const ClientProfileScreen({super.key});
@@ -275,6 +277,13 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        if (post.budget != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Budget: ₹${post.budget!.toStringAsFixed(0)}',
+                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.success, fontWeight: FontWeight.w600),
+                          ),
+                        ],
                         const SizedBox(height: AppDimensions.paddingSM),
                         Text(
                           post.description,
@@ -359,10 +368,41 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
             children: [
               ListTile(
                 leading: const Icon(Icons.location_on_rounded, color: AppColors.textSecondary),
-                title: const Text('Saved Addresses'),
+                title: const Text('Saved Address'),
+                subtitle: Text(
+                  user.address.street.isNotEmpty 
+                      ? '${user.address.street}, ${user.address.city}, ${user.address.state} ${user.address.pincode}'
+                      : 'No address saved',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
                 trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimensions.radiusLG))),
-                onTap: () {},
+                onTap: () async {
+                  final result = await context.pushNamed<dynamic>(RouteNames.mapPicker);
+                  if (result != null && result is MapPickerResult) {
+                    try {
+                      await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+                        'address': {
+                          'street': result.placemark.street ?? '',
+                          'city': result.placemark.locality ?? '',
+                          'state': result.placemark.administrativeArea ?? '',
+                          'pincode': result.placemark.postalCode ?? '',
+                          'country': result.placemark.country ?? '',
+                          'lat': result.latitude,
+                          'lng': result.longitude,
+                        }
+                      });
+                      if (context.mounted) {
+                        SnackbarHelper.success(context, 'Address updated successfully');
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        SnackbarHelper.error(context, 'Failed to update address: $e');
+                      }
+                    }
+                  }
+                },
               ),
               const Divider(height: 1, indent: 56),
               SwitchListTile(
@@ -421,6 +461,26 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
                 onTap: () => context.push('/privacy-policy'),
               ),
             ],
+          ),
+        ),
+        const SizedBox(height: AppDimensions.paddingLG),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG, vertical: AppDimensions.paddingSM),
+          child: Text('Admin', style: AppTextStyles.headingMedium),
+        ),
+        Container(
+          margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+            border: Border.all(color: AppColors.border, width: AppDimensions.cardBorderWidth),
+          ),
+          child: ListTile(
+            leading: const Icon(Icons.campaign_rounded, color: AppColors.textSecondary),
+            title: Text('Manage Ads', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
+            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary, size: 20),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusLG)),
+            onTap: () => context.push('/admin/ads'),
           ),
         ),
         const SizedBox(height: AppDimensions.paddingLG),

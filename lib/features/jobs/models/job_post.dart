@@ -11,6 +11,7 @@ class JobPost {
   final String status; // 'open', 'in_progress', 'completed'
   final DateTime createdAt;
   final List<String> imageUrls; // Optional images describing the problem
+  final double? budget;
 
   JobPost({
     required this.id,
@@ -23,6 +24,7 @@ class JobPost {
     this.status = 'open',
     required this.createdAt,
     this.imageUrls = const [],
+    this.budget,
   });
 
   Map<String, dynamic> toMap() {
@@ -36,6 +38,7 @@ class JobPost {
       'status': status,
       'createdAt': Timestamp.fromDate(createdAt),
       'imageUrls': imageUrls,
+      if (budget != null) 'budget': budget,
     };
   }
 
@@ -51,6 +54,7 @@ class JobPost {
       status: map['status'] ?? 'open',
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       imageUrls: List<String>.from(map['imageUrls'] ?? []),
+      budget: (map['budget'] as num?)?.toDouble(),
     );
   }
 }

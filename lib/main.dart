@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/config/firebase_options.dart';
+import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'core/config/firebase_options.dart';
 import 'core/theme/theme.dart';
 import 'core/providers/app_provider_observer.dart';
 import 'core/router/app_router.dart';
@@ -28,6 +32,7 @@ void main() async {
       rethrow;
     }
   }
+
   runApp(
     ProviderScope(
       observers: [AppProviderObserver()],
@@ -48,7 +53,7 @@ class _MyAppState extends ConsumerState<MyApp> {
   void initState() {
     super.initState();
     _loadTheme();
-    PermissionService.requestNotificationPermission();
+    _initializeNotifications();
     PermissionService.requestLocationPermission();
     FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
@@ -65,10 +70,15 @@ class _MyAppState extends ConsumerState<MyApp> {
     ref.read(isDarkModeProvider.notifier).toggle(isDark);
   }
 
+  Future<void> _initializeNotifications() async {
+    await PermissionService.requestNotificationPermission();
+    await NotificationService.initializePushDiagnostics();
+  }
+
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
-    final isDarkMode = ref.watch(isDarkModeProvider);
+    ref.watch(isDarkModeProvider);
 
     return MaterialApp.router(
       title: 'ProTasker',

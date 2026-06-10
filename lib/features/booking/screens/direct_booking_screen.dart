@@ -45,6 +45,7 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
   ];
 
   bool _isLoading = false;
+  bool _isEmergency = false;
 
   @override
   void initState() {
@@ -69,7 +70,9 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final double price = double.tryParse(_priceController.text) ?? 0.0;
+      final double basePrice = double.tryParse(_priceController.text) ?? 0.0;
+      final double priorityFee = _isEmergency ? 199.0 : 0.0;
+      final double price = basePrice + priorityFee;
       final bookingId = const Uuid().v4();
 
       final booking = BookingModel(
@@ -100,6 +103,8 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         otp: (Random().nextInt(9000) + 1000).toString(),
+        isEmergency: _isEmergency,
+        priorityFee: priorityFee,
       );
 
       await ref.read(bookingRepositoryProvider).createBooking(booking);
@@ -411,6 +416,48 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
                       Text(
                         'Leave as 0 to negotiate price with the provider after booking.',
                         style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                      ),
+                      const SizedBox(height: AppDimensions.paddingLG),
+
+                      // Emergency Toggle
+                      Container(
+                        padding: const EdgeInsets.all(AppDimensions.paddingMD),
+                        decoration: BoxDecoration(
+                          color: AppColors.error.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                          border: Border.all(color: AppColors.error.withValues(alpha: 0.5)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.emergency_rounded, color: AppColors.error, size: 28),
+                            const SizedBox(width: AppDimensions.paddingMD),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Emergency / Instant Booking',
+                                    style: AppTextStyles.labelLarge.copyWith(color: AppColors.error, fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Need an electrician within 30 minutes? Add a ₹199 priority fee.',
+                                    style: AppTextStyles.caption.copyWith(color: AppColors.textPrimary),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Switch(
+                              value: _isEmergency,
+                              activeColor: AppColors.error,
+                              onChanged: (val) {
+                                setState(() {
+                                  _isEmergency = val;
+                                });
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: AppDimensions.paddingXL),
 

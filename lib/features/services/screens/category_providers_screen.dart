@@ -19,17 +19,30 @@ class CategoryProvidersScreen extends ConsumerWidget {
     final providersAsync = ref.watch(categoryProvidersProvider(category));
     final userAsync = ref.watch(currentUserProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
+    return PopScope(
+      canPop: context.canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.go('/client/home');
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/client/home');
+              }
+            },
+          ),
+          title: Text('${category.toUpperCase()} PROVIDERS', style: const TextStyle(color: Colors.white)),
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
         ),
-        title: Text('${category.toUpperCase()} PROVIDERS', style: const TextStyle(color: Colors.white)),
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
-      ),
       body: SafeArea(
         child: providersAsync.when(
         data: (providers) {
@@ -84,9 +97,10 @@ class CategoryProvidersScreen extends ConsumerWidget {
         },
         loading: () => const LoadingShimmer(type: ShimmerType.list),
         error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.refresh(categoryProvidersProvider(category))),
-      ),
-      ),
-    );
+      ), // Closes providersAsync.when
+      ), // Closes SafeArea
+      ), // Closes Scaffold
+    ); // Closes PopScope
   }
 }
 

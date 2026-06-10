@@ -596,7 +596,29 @@ class _ProposalCard extends ConsumerWidget {
 
                         if (context.mounted) {
                           Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Proposal Accepted! Provider has been notified.')));
+                          showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              title: Row(
+                                children: [
+                                  const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 28),
+                                  const SizedBox(width: 12),
+                                  Text('Hired!', style: AppTextStyles.headingLarge.copyWith(color: AppColors.success)),
+                                ],
+                              ),
+                              content: const Text('You have successfully accepted the proposal. The provider has been notified and other proposals have been removed.'),
+                              actions: [
+                                AppButton(
+                                  label: 'View Booking',
+                                  onPressed: () {
+                                    Navigator.pop(ctx);
+                                    context.go('/client/bookings');
+                                  },
+                                ),
+                              ],
+                            ),
+                          );
                         }
                       } catch (e) {
                         if (context.mounted) {

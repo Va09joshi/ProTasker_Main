@@ -12,7 +12,8 @@ import '../../../core/router/route_names.dart';
 import '../providers/home_providers.dart';
 import '../../location/screens/map_picker_screen.dart';
 import '../../jobs/models/job_post.dart';
-import '../widgets/auto_sliding_banner.dart';
+import '../../advertising/widgets/ad_banner_carousel.dart';
+import '../../advertising/widgets/custom_ad_banner.dart';
 import '../../../core/services/location_service.dart';
 
 class ClientHomeScreen extends ConsumerStatefulWidget {
@@ -121,11 +122,22 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(
-                          'Hello, ${user.name.split(' ').first}', 
-                          style: AppTextStyles.headingLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                'Hello, ${user.name.split(' ').first}', 
+                                style: AppTextStyles.headingLarge.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (user.isVerified)
+                              const Padding(
+                                padding: EdgeInsets.only(left: 6.0),
+                                child: Icon(Icons.verified, color: Colors.blueAccent, size: 20),
+                              ),
+                          ],
                         ),
                         GestureDetector(
                           onTap: () => _showLocationBottomSheet(context, user.uid, user.address.city),
@@ -160,6 +172,7 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                                 size: 40,
                                 textColor: Colors.white,
                                 backgroundColor: Colors.white.withValues(alpha: 0.2),
+                                isVerified: user.isVerified,
                               ),
                             ),
                             Positioned(
@@ -191,7 +204,9 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                         children: [
                           _buildSearchBar(context),
                           const SizedBox(height: AppDimensions.paddingXL),
-                          const AutoSlidingBanner(),
+                          const CustomAdBanner(),
+                          const SizedBox(height: AppDimensions.paddingXL),
+                          const AdBannerCarousel(),
                           const SizedBox(height: AppDimensions.paddingXL),
                           _buildPostProblemBanner(context),
                           const SizedBox(height: AppDimensions.paddingXL),
@@ -589,7 +604,13 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                         label: 'Re-book',
                         variant: ButtonVariant.secondary,
                         fullWidth: false,
-                        onPressed: () {},
+                        onPressed: () {
+                          context.pushNamed(
+                            'bookProvider',
+                            pathParameters: {'id': booking.providerId},
+                            queryParameters: {'category': booking.serviceCategory.name},
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -787,6 +808,7 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                                   imageUrl: provider.profilePhoto,
                                   name: provider.name,
                                   size: 72,
+                                  isVerified: provider.isVerified,
                                 ),
                                 if (provider.isOnline)
                                   Positioned(

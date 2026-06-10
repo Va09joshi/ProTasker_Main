@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/theme.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/utils/role_guard.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/widgets.dart';
@@ -17,7 +18,8 @@ class ProviderJobsScreen extends ConsumerStatefulWidget {
   ConsumerState<ProviderJobsScreen> createState() => _ProviderJobsScreenState();
 }
 
-class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with SingleTickerProviderStateMixin {
+class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -32,28 +34,31 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
     super.dispose();
   }
 
-  Future<void> _updateStatus(BuildContext context, BookingModel booking, BookingStatus newStatus, {String? reason}) async {
+  Future<void> _updateStatus(
+    BuildContext context,
+    BookingModel booking,
+    BookingStatus newStatus, {
+    String? reason,
+  }) async {
     try {
       final db = FirebaseFirestore.instance;
       final batch = db.batch();
-      
+
       final bookingRef = db.collection('bookings').doc(booking.id);
       final updates = <String, dynamic>{
         'status': newStatus.name,
         'updatedAt': FieldValue.serverTimestamp(),
       };
       if (reason != null) updates['notes'] = reason;
-      
+
       batch.update(bookingRef, updates);
 
       String title = 'Booking Update';
       String body = 'Your booking for ${booking.serviceTitle} was updated.';
-      NotificationType type = NotificationType.system;
 
       if (newStatus == BookingStatus.accepted) {
         title = 'Booking Accepted';
         body = '${booking.providerName} accepted your booking.';
-        type = NotificationType.bookingAccepted;
       } else if (newStatus == BookingStatus.rejected) {
         title = 'Booking Declined';
         body = '${booking.providerName} declined your booking.';
@@ -65,21 +70,14 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
         body = '${booking.providerName} has started the job.';
       }
 
-      final notifRef = db.collection('notifications').doc();
-      final notification = NotificationModel(
-        id: notifRef.id,
-        userId: booking.clientId,
+      await batch.commit();
+
+      await NotificationService.sendNotification(
+        targetUid: booking.clientId,
         title: title,
         body: body,
-        type: type,
-        payload: {'bookingId': booking.id},
-        isRead: false,
-        createdAt: DateTime.now(),
       );
-      batch.set(notifRef, notification.toMap());
 
-      await batch.commit();
-      
       if (mounted) {
         SnackbarHelper.info(context, 'Status updated to ${newStatus.name}');
       }
@@ -113,13 +111,24 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
               const SizedBox(height: AppDimensions.paddingMD),
               Wrap(
                 spacing: 8,
-                children: ['Too far', 'Unavailable', 'Emergency'].map((r) => ActionChip(
-                  label: Text(r, style: AppTextStyles.labelLarge),
-                  backgroundColor: AppColors.surface,
-                  side: BorderSide(color: AppColors.border, width: AppDimensions.cardBorderWidth),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusPill)),
-                  onPressed: () => ctrl.text = r,
-                )).toList(),
+                children: ['Too far', 'Unavailable', 'Emergency']
+                    .map(
+                      (r) => ActionChip(
+                        label: Text(r, style: AppTextStyles.labelLarge),
+                        backgroundColor: AppColors.surface,
+                        side: BorderSide(
+                          color: AppColors.border,
+                          width: AppDimensions.cardBorderWidth,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(
+                            AppDimensions.radiusPill,
+                          ),
+                        ),
+                        onPressed: () => ctrl.text = r,
+                      ),
+                    )
+                    .toList(),
               ),
               const SizedBox(height: AppDimensions.paddingLG),
               AppTextField(
@@ -133,7 +142,12 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
                 variant: ButtonVariant.danger,
                 onPressed: () {
                   if (ctrl.text.isNotEmpty) {
-                    _updateStatus(context, booking, BookingStatus.rejected, reason: ctrl.text);
+                    _updateStatus(
+                      context,
+                      booking,
+                      BookingStatus.rejected,
+                      reason: ctrl.text,
+                    );
                     Navigator.pop(ctx);
                   }
                 },
@@ -178,7 +192,12 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
                 variant: ButtonVariant.danger,
                 onPressed: () {
                   if (ctrl.text.isNotEmpty) {
-                    _updateStatus(context, booking, BookingStatus.cancelled, reason: 'Provider Cancelled: ${ctrl.text}');
+                    _updateStatus(
+                      context,
+                      booking,
+                      BookingStatus.cancelled,
+                      reason: 'Provider Cancelled: ${ctrl.text}',
+                    );
                     Navigator.pop(ctx);
                   }
                 },
@@ -214,13 +233,14 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
           Expanded(
             child: AppButton(
               label: 'Accept',
-              onPressed: () => _updateStatus(context, booking, BookingStatus.accepted),
+              onPressed: () =>
+                  _updateStatus(context, booking, BookingStatus.accepted),
             ),
           ),
         ],
       );
     }
-    
+
     if (booking.status == BookingStatus.accepted) {
       return Row(
         children: [
@@ -235,7 +255,8 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
           Expanded(
             child: AppButton(
               label: 'On My Way',
-              onPressed: () => _updateStatus(context, booking, BookingStatus.onTheWay),
+              onPressed: () =>
+                  _updateStatus(context, booking, BookingStatus.onTheWay),
             ),
           ),
         ],
@@ -247,7 +268,8 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
         width: double.infinity,
         child: AppButton(
           label: 'Start Job',
-          onPressed: () => _updateStatus(context, booking, BookingStatus.inProgress),
+          onPressed: () =>
+              _updateStatus(context, booking, BookingStatus.inProgress),
         ),
       );
     }
@@ -274,7 +296,8 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
         backgroundColor: AppColors.background,
         appBar: AppBar(
           title: const Text('Manage Jobs'),
-          backgroundColor: AppColors.primary, foregroundColor: Colors.white,
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
           bottom: TabBar(
             controller: _tabController,
             indicatorColor: Colors.white,
@@ -295,9 +318,21 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
           child: TabBarView(
             controller: _tabController,
             children: [
-              _buildStreamTab(providerRequestsStreamProvider, 'No new requests.', Icons.notifications_none_rounded),
-              _buildStreamTab(providerUpcomingStreamProvider, 'No upcoming jobs.', Icons.calendar_month_rounded),
-              _buildStreamTab(providerActiveStreamProvider, 'No active jobs right now.', Icons.work_outline_rounded),
+              _buildStreamTab(
+                providerRequestsStreamProvider,
+                'No new requests.',
+                Icons.notifications_none_rounded,
+              ),
+              _buildStreamTab(
+                providerUpcomingStreamProvider,
+                'No upcoming jobs.',
+                Icons.calendar_month_rounded,
+              ),
+              _buildStreamTab(
+                providerActiveStreamProvider,
+                'No active jobs right now.',
+                Icons.work_outline_rounded,
+              ),
               _buildHistoryTab(),
             ],
           ),
@@ -306,7 +341,11 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
     );
   }
 
-  Widget _buildStreamTab(StreamProvider<List<BookingModel>> provider, String emptyMsg, IconData icon) {
+  Widget _buildStreamTab(
+    StreamProvider<List<BookingModel>> provider,
+    String emptyMsg,
+    IconData icon,
+  ) {
     final asyncData = ref.watch(provider);
     return RefreshIndicator(
       onRefresh: () async {
@@ -322,7 +361,9 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
             physics: const AlwaysScrollableScrollPhysics(),
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             padding: EdgeInsets.symmetric(
-              horizontal: MediaQuery.of(context).size.width > 600 ? 32.0 : AppDimensions.paddingLG,
+              horizontal: MediaQuery.of(context).size.width > 600
+                  ? 32.0
+                  : AppDimensions.paddingLG,
               vertical: AppDimensions.paddingLG,
             ),
             itemCount: bookings.length,
@@ -338,7 +379,10 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
           );
         },
         loading: () => const LoadingShimmer(type: ShimmerType.list),
-        error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.refresh(provider)),
+        error: (e, _) => ErrorView(
+          message: e.toString(),
+          onRetry: () => ref.refresh(provider),
+        ),
       ),
     );
   }
@@ -354,10 +398,12 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
       backgroundColor: AppColors.surface,
       child: asyncData.when(
         data: (bookings) {
-          if (bookings.isEmpty) return _buildEmptyState('No history yet.', Icons.history_rounded);
+          if (bookings.isEmpty)
+            return _buildEmptyState('No history yet.', Icons.history_rounded);
           return NotificationListener<ScrollNotification>(
             onNotification: (scrollInfo) {
-              if (scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) {
+              if (scrollInfo.metrics.pixels ==
+                  scrollInfo.metrics.maxScrollExtent) {
                 ref.read(providerHistoryProvider.notifier).loadMore();
               }
               return false;
@@ -366,14 +412,24 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
               physics: const AlwaysScrollableScrollPhysics(),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               padding: EdgeInsets.symmetric(
-                horizontal: MediaQuery.of(context).size.width > 600 ? 32.0 : AppDimensions.paddingLG,
+                horizontal: MediaQuery.of(context).size.width > 600
+                    ? 32.0
+                    : AppDimensions.paddingLG,
                 vertical: AppDimensions.paddingLG,
               ),
               itemCount: bookings.length + (asyncData.isLoading ? 1 : 0),
               itemBuilder: (ctx, i) {
-                if (i >= bookings.length) return const Center(child: Padding(padding: EdgeInsets.all(AppDimensions.paddingSM), child: CircularProgressIndicator()));
+                if (i >= bookings.length)
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(AppDimensions.paddingSM),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: AppDimensions.paddingLG),
+                  padding: const EdgeInsets.only(
+                    bottom: AppDimensions.paddingLG,
+                  ),
                   child: BookingCard(
                     booking: bookings[i],
                     viewerRole: UserRole.provider,
@@ -386,7 +442,10 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
           );
         },
         loading: () => const LoadingShimmer(type: ShimmerType.list),
-        error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.refresh(providerHistoryProvider)),
+        error: (e, _) => ErrorView(
+          message: e.toString(),
+          onRetry: () => ref.refresh(providerHistoryProvider),
+        ),
       ),
     );
   }
@@ -396,11 +455,7 @@ class _ProviderJobsScreenState extends ConsumerState<ProviderJobsScreen> with Si
       physics: const AlwaysScrollableScrollPhysics(),
       children: [
         SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-        EmptyState(
-          icon: icon,
-          title: 'No Jobs',
-          subtitle: msg,
-        ),
+        EmptyState(icon: icon, title: 'No Jobs', subtitle: msg),
       ],
     );
   }

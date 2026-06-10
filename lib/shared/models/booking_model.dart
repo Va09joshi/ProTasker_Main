@@ -41,6 +41,8 @@ class BookingModel {
   final DateTime createdAt;
   final DateTime updatedAt;
   final String? otp;
+  final bool isEmergency;
+  final double priorityFee;
 
   BookingModel({
     required this.id,
@@ -68,6 +70,8 @@ class BookingModel {
     required this.createdAt,
     required this.updatedAt,
     this.otp,
+    this.isEmergency = false,
+    this.priorityFee = 0.0,
   });
 
   factory BookingModel.fromFirestore(DocumentSnapshot doc) {
@@ -113,6 +117,8 @@ class BookingModel {
       createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       updatedAt: (map['updatedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       otp: map['otp'] as String?,
+      isEmergency: map['isEmergency'] as bool? ?? false,
+      priorityFee: (map['priorityFee'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -143,6 +149,8 @@ class BookingModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
       'otp': otp,
+      'isEmergency': isEmergency,
+      'priorityFee': priorityFee,
     };
   }
 
@@ -172,6 +180,8 @@ class BookingModel {
     DateTime? createdAt,
     DateTime? updatedAt,
     String? otp,
+    bool? isEmergency,
+    double? priorityFee,
   }) {
     return BookingModel(
       id: id ?? this.id,
@@ -199,6 +209,8 @@ class BookingModel {
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       otp: otp ?? this.otp,
+      isEmergency: isEmergency ?? this.isEmergency,
+      priorityFee: priorityFee ?? this.priorityFee,
     );
   }
 }

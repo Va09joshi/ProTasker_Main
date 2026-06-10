@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../../core/theme/theme.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/providers/user_session_provider.dart';
 import '../../chat/repositories/chat_repository.dart';
@@ -26,30 +27,36 @@ class BookingDetailScreen extends ConsumerWidget {
     }
   }
 
-  Future<void> _updateStatus(BuildContext context, BookingModel booking, BookingStatus newStatus, String currentUserId, {String? reason}) async {
+  Future<void> _updateStatus(
+    BuildContext context,
+    BookingModel booking,
+    BookingStatus newStatus,
+    String currentUserId, {
+    String? reason,
+  }) async {
     try {
       final db = FirebaseFirestore.instance;
       final batch = db.batch();
-      
+
       final bookingRef = db.collection('bookings').doc(booking.id);
       final updates = <String, dynamic>{
         'status': newStatus.name,
         'updatedAt': FieldValue.serverTimestamp(),
       };
       if (reason != null) updates['notes'] = reason;
-      
+
       batch.update(bookingRef, updates);
 
       // Send notification to the OTHER party
-      final recipientId = currentUserId == booking.clientId ? booking.providerId : booking.clientId;
+      final recipientId = currentUserId == booking.clientId
+          ? booking.providerId
+          : booking.clientId;
       String title = 'Booking Update';
       String body = 'Your booking for ${booking.serviceTitle} was updated.';
-      NotificationType type = NotificationType.system;
 
       if (newStatus == BookingStatus.accepted) {
         title = 'Booking Accepted';
         body = '${booking.providerName} accepted your booking.';
-        type = NotificationType.bookingAccepted;
       } else if (newStatus == BookingStatus.rejected) {
         title = 'Booking Declined';
         body = '${booking.providerName} declined your booking.';
@@ -64,28 +71,27 @@ class BookingDetailScreen extends ConsumerWidget {
         body = '${booking.providerName} has started the job.';
       }
 
-      final notifRef = db.collection('notifications').doc();
-      final notification = NotificationModel(
-        id: notifRef.id,
-        userId: recipientId,
+      await batch.commit();
+
+      await NotificationService.sendNotification(
+        targetUid: recipientId,
         title: title,
         body: body,
-        type: type,
-        payload: {'bookingId': booking.id},
-        isRead: false,
-        createdAt: DateTime.now(),
       );
-      batch.set(notifRef, notification.toMap());
 
-      await batch.commit();
-      
-      if (context.mounted) SnackbarHelper.info(context, 'Status updated to ${newStatus.name}');
+      if (context.mounted)
+        SnackbarHelper.info(context, 'Status updated to ${newStatus.name}');
     } catch (e) {
-      if (context.mounted) SnackbarHelper.error(context, 'Failed to update: $e');
+      if (context.mounted)
+        SnackbarHelper.error(context, 'Failed to update: $e');
     }
   }
 
-  void _showCancelSheet(BuildContext context, BookingModel booking, String currentUserId) {
+  void _showCancelSheet(
+    BuildContext context,
+    BookingModel booking,
+    String currentUserId,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -117,7 +123,13 @@ class BookingDetailScreen extends ConsumerWidget {
                 variant: ButtonVariant.danger,
                 onPressed: () {
                   if (ctrl.text.isNotEmpty) {
-                    _updateStatus(context, booking, BookingStatus.cancelled, currentUserId, reason: 'Client Cancelled: ${ctrl.text}');
+                    _updateStatus(
+                      context,
+                      booking,
+                      BookingStatus.cancelled,
+                      currentUserId,
+                      reason: 'Client Cancelled: ${ctrl.text}',
+                    );
                     Navigator.pop(ctx);
                   }
                 },
@@ -151,68 +163,93 @@ class BookingDetailScreen extends ConsumerWidget {
           onPressed: () => context.pop(),
         ),
         title: const Text('Booking Details'),
-        backgroundColor: AppColors.primary, foregroundColor: Colors.white,
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
       ),
       body: SafeArea(
         child: bookingAsync.when(
           data: (booking) {
-            if (booking == null) return const Center(child: Text('Booking not found'));
-            
+            if (booking == null)
+              return const Center(child: Text('Booking not found'));
+
             return currentUserAsync.when(
               data: (user) {
-                if (user == null) return const Center(child: Text('User error'));
-                
+                if (user == null)
+                  return const Center(child: Text('User error'));
+
                 final isClient = user.role == UserRole.client;
-                
-                return SingleChildScrollView(
+
+                return Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppColors.background,
+                        AppColors.primary.withValues(alpha: 0.05),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: EdgeInsets.symmetric(
-                    horizontal: MediaQuery.of(context).size.width > 600 ? 32.0 : AppDimensions.paddingLG,
+                    horizontal: MediaQuery.of(context).size.width > 600
+                        ? 32.0
+                        : AppDimensions.paddingLG,
                     vertical: AppDimensions.paddingLG,
                   ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    StatusTimeline(currentStatus: booking.status),
-                    const SizedBox(height: AppDimensions.paddingXL),
-                    
-                    _buildServiceInfoCard(booking),
-                    const SizedBox(height: AppDimensions.paddingMD),
-                    
-                    if (booking.status == BookingStatus.accepted || booking.status == BookingStatus.onTheWay) ...[
-                      _buildOTPSecurityCard(booking, isClient, context),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      StatusTimeline(currentStatus: booking.status),
+                      const SizedBox(height: AppDimensions.paddingXL),
+
+                      _buildServiceInfoCard(booking),
                       const SizedBox(height: AppDimensions.paddingMD),
-                    ],
-                    
-                    _buildPartyCard(booking, isClient, context, ref),
-                    const SizedBox(height: AppDimensions.paddingMD),
-                    
-                    _buildPriceBreakdownCard(booking),
-                    const SizedBox(height: AppDimensions.paddingMD),
-                    
-                    if (booking.proofImages.isNotEmpty) ...[
-                      _buildProofImages(booking),
+
+                      if (booking.status == BookingStatus.accepted ||
+                          booking.status == BookingStatus.onTheWay) ...[
+                        _buildOTPSecurityCard(booking, isClient, context),
+                        const SizedBox(height: AppDimensions.paddingMD),
+                      ],
+
+                      _buildPartyCard(booking, isClient, context, ref),
                       const SizedBox(height: AppDimensions.paddingMD),
-                    ],
-                    
-                    if (booking.status == BookingStatus.completed && booking.clientReviewed) ...[
-                      _buildReviewSection(ref, booking.id),
+
+                      _buildPriceBreakdownCard(booking),
                       const SizedBox(height: AppDimensions.paddingMD),
+
+                      if (booking.proofImages.isNotEmpty) ...[
+                        _buildProofImages(booking),
+                        const SizedBox(height: AppDimensions.paddingMD),
+                      ],
+
+                      if (booking.status == BookingStatus.completed &&
+                          booking.clientReviewed) ...[
+                        _buildReviewSection(ref, booking.id),
+                        const SizedBox(height: AppDimensions.paddingMD),
+                      ],
+
+                      const SizedBox(height: AppDimensions.paddingLG),
+                      _buildActionButtons(context, booking, user),
+                      const SizedBox(height: 100),
                     ],
-                    
-                    const SizedBox(height: AppDimensions.paddingLG),
-                    _buildActionButtons(context, booking, user),
-                    const SizedBox(height: 100),
-                  ],
+                  ),
                 ),
               );
-              },
+            },
               loading: () => const LoadingShimmer(type: ShimmerType.profile),
-              error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.refresh(currentUserProvider)),
+              error: (e, _) => ErrorView(
+                message: e.toString(),
+                onRetry: () => ref.refresh(currentUserProvider),
+              ),
             );
           },
           loading: () => const LoadingShimmer(type: ShimmerType.profile),
-          error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.refresh(bookingDetailStreamProvider(bookingId))),
+          error: (e, _) => ErrorView(
+            message: e.toString(),
+            onRetry: () => ref.refresh(bookingDetailStreamProvider(bookingId)),
+          ),
         ),
       ),
     );
@@ -223,8 +260,18 @@ class BookingDetailScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(AppDimensions.paddingLG),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-        border: Border.all(color: AppColors.border, width: AppDimensions.cardBorderWidth),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        border: Border.all(
+          color: AppColors.border.withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -232,32 +279,58 @@ class BookingDetailScreen extends ConsumerWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Expanded(child: Text(booking.serviceTitle, style: AppTextStyles.headingLarge)),
+              Expanded(
+                child: Text(
+                  booking.serviceTitle,
+                  style: AppTextStyles.headingLarge,
+                ),
+              ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppColors.accent.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
                 ),
-                child: Text(booking.serviceCategory.name, style: AppTextStyles.labelSmall.copyWith(color: AppColors.accent)),
+                child: Text(
+                  booking.serviceCategory.name,
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.accent,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: AppDimensions.paddingMD),
           Row(
             children: [
-              const Icon(Icons.calendar_today_rounded, size: 16, color: AppColors.textSecondary),
+              const Icon(
+                Icons.calendar_today_rounded,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
               const SizedBox(width: AppDimensions.paddingSM),
-              Text('${DateFormat.yMMMd().format(booking.scheduledAt)} • ${booking.timeSlot}', style: AppTextStyles.bodyMedium),
+              Text(
+                '${DateFormat.yMMMd().format(booking.scheduledAt)} • ${booking.timeSlot}',
+                style: AppTextStyles.bodyMedium,
+              ),
             ],
           ),
           const SizedBox(height: AppDimensions.paddingSM),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.location_on_rounded, size: 16, color: AppColors.textSecondary),
+              const Icon(
+                Icons.location_on_rounded,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
               const SizedBox(width: AppDimensions.paddingSM),
-              Expanded(child: Text('${booking.address.street}, ${booking.address.city}, ${booking.address.state} ${booking.address.pincode}', style: AppTextStyles.bodyMedium)),
+              Expanded(
+                child: Text(
+                  '${booking.address.street}, ${booking.address.city}, ${booking.address.state} ${booking.address.pincode}',
+                  style: AppTextStyles.bodyMedium,
+                ),
+              ),
             ],
           ),
         ],
@@ -265,7 +338,12 @@ class BookingDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildPartyCard(BookingModel booking, bool isClient, BuildContext context, WidgetRef ref) {
+  Widget _buildPartyCard(
+    BookingModel booking,
+    bool isClient,
+    BuildContext context,
+    WidgetRef ref,
+  ) {
     final avatar = isClient ? booking.providerPhoto : booking.clientPhoto;
     final name = isClient ? booking.providerName : booking.clientName;
     final phone = isClient ? booking.providerPhone : booking.clientPhone;
@@ -275,13 +353,28 @@ class BookingDetailScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(AppDimensions.paddingLG),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-        border: Border.all(color: AppColors.border, width: AppDimensions.cardBorderWidth),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        border: Border.all(
+          color: AppColors.border.withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: AppTextStyles.labelSmall.copyWith(color: AppColors.textSecondary)),
+          Text(
+            label,
+            style: AppTextStyles.labelSmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
+          ),
           const SizedBox(height: AppDimensions.paddingMD),
           Row(
             children: [
@@ -297,9 +390,18 @@ class BookingDetailScreen extends ConsumerWidget {
                       onTap: () => _makePhoneCall(phone),
                       child: Row(
                         children: [
-                          const Icon(Icons.phone_rounded, size: 14, color: AppColors.primary),
+                          const Icon(
+                            Icons.phone_rounded,
+                            size: 14,
+                            color: AppColors.primary,
+                          ),
                           const SizedBox(width: 4),
-                          Text(phone, style: AppTextStyles.bodyMedium.copyWith(color: AppColors.primary)),
+                          Text(
+                            phone,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              color: AppColors.primary,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -307,13 +409,24 @@ class BookingDetailScreen extends ConsumerWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.chat_bubble_outline_rounded, color: AppColors.accent),
+                icon: const Icon(
+                  Icons.chat_bubble_outline_rounded,
+                  color: AppColors.accent,
+                ),
                 style: IconButton.styleFrom(
                   backgroundColor: AppColors.accent.withValues(alpha: 0.1),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusSM)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                  ),
                 ),
                 onPressed: () async {
-                  final chatId = await ref.read(chatRepositoryProvider).getOrCreateChat(booking.clientId, booking.providerId, booking.id);
+                  final chatId = await ref
+                      .read(chatRepositoryProvider)
+                      .getOrCreateChat(
+                        booking.clientId,
+                        booking.providerId,
+                        booking.id,
+                      );
                   if (context.mounted) context.push('/chat/$chatId');
                 },
               ),
@@ -329,8 +442,18 @@ class BookingDetailScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(AppDimensions.paddingLG),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-        border: Border.all(color: AppColors.border, width: AppDimensions.cardBorderWidth),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        border: Border.all(
+          color: AppColors.border.withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -341,7 +464,10 @@ class BookingDetailScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Gross Amount', style: AppTextStyles.bodyMedium),
-              Text('₹${booking.grossPrice.toStringAsFixed(2)}', style: AppTextStyles.bodyMedium),
+              Text(
+                '₹${booking.grossPrice.toStringAsFixed(2)}',
+                style: AppTextStyles.bodyMedium,
+              ),
             ],
           ),
           const SizedBox(height: AppDimensions.paddingSM),
@@ -349,7 +475,10 @@ class BookingDetailScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Platform Fee', style: AppTextStyles.bodyMedium),
-              Text('- ₹${booking.platformFee.toStringAsFixed(2)}', style: AppTextStyles.bodyMedium),
+              Text(
+                '- ₹${booking.platformFee.toStringAsFixed(2)}',
+                style: AppTextStyles.bodyMedium,
+              ),
             ],
           ),
           const SizedBox(height: AppDimensions.paddingSM),
@@ -363,7 +492,12 @@ class BookingDetailScreen extends ConsumerWidget {
                   color: AppColors.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
                 ),
-                child: Text('Cash', style: AppTextStyles.labelSmall.copyWith(color: AppColors.success)),
+                child: Text(
+                  'Cash',
+                  style: AppTextStyles.labelSmall.copyWith(
+                    color: AppColors.success,
+                  ),
+                ),
               ),
             ],
           ),
@@ -374,7 +508,12 @@ class BookingDetailScreen extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               const Text('Net Paid', style: AppTextStyles.labelLarge),
-              Text('₹${booking.netPrice.toStringAsFixed(2)}', style: AppTextStyles.headingLarge.copyWith(color: AppColors.success)),
+              Text(
+                '₹${booking.netPrice.toStringAsFixed(2)}',
+                style: AppTextStyles.headingLarge.copyWith(
+                  color: AppColors.success,
+                ),
+              ),
             ],
           ),
         ],
@@ -422,17 +561,25 @@ class BookingDetailScreen extends ConsumerWidget {
             return ReviewCard(review: review);
           },
           loading: () => const LoadingShimmer(type: ShimmerType.card),
-          error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.refresh(bookingReviewProvider(bookingId))),
+          error: (e, _) => ErrorView(
+            message: e.toString(),
+            onRetry: () => ref.refresh(bookingReviewProvider(bookingId)),
+          ),
         ),
       ],
     );
   }
 
-  Widget _buildActionButtons(BuildContext context, BookingModel booking, UserModel user) {
+  Widget _buildActionButtons(
+    BuildContext context,
+    BookingModel booking,
+    UserModel user,
+  ) {
     final isClient = user.role == UserRole.client;
 
     if (isClient) {
-      if (booking.status == BookingStatus.pending || booking.status == BookingStatus.accepted) {
+      if (booking.status == BookingStatus.pending ||
+          booking.status == BookingStatus.accepted) {
         return SizedBox(
           width: double.infinity,
           child: AppButton(
@@ -442,7 +589,8 @@ class BookingDetailScreen extends ConsumerWidget {
           ),
         );
       }
-      if (booking.status == BookingStatus.completed && !booking.clientReviewed) {
+      if (booking.status == BookingStatus.completed &&
+          !booking.clientReviewed) {
         return SizedBox(
           width: double.infinity,
           child: AppButton(
@@ -462,20 +610,31 @@ class BookingDetailScreen extends ConsumerWidget {
               child: AppButton(
                 label: 'Decline',
                 variant: ButtonVariant.danger,
-                onPressed: () => _updateStatus(context, booking, BookingStatus.rejected, user.uid, reason: 'Declined by provider'),
+                onPressed: () => _updateStatus(
+                  context,
+                  booking,
+                  BookingStatus.rejected,
+                  user.uid,
+                  reason: 'Declined by provider',
+                ),
               ),
             ),
             const SizedBox(width: AppDimensions.paddingMD),
             Expanded(
               child: AppButton(
                 label: 'Accept',
-                onPressed: () => _updateStatus(context, booking, BookingStatus.accepted, user.uid),
+                onPressed: () => _updateStatus(
+                  context,
+                  booking,
+                  BookingStatus.accepted,
+                  user.uid,
+                ),
               ),
             ),
           ],
         );
       }
-      
+
       if (booking.status == BookingStatus.accepted) {
         return Row(
           children: [
@@ -490,7 +649,12 @@ class BookingDetailScreen extends ConsumerWidget {
             Expanded(
               child: AppButton(
                 label: 'On My Way',
-                onPressed: () => _updateStatus(context, booking, BookingStatus.onTheWay, user.uid),
+                onPressed: () => _updateStatus(
+                  context,
+                  booking,
+                  BookingStatus.onTheWay,
+                  user.uid,
+                ),
               ),
             ),
           ],
@@ -522,19 +686,31 @@ class BookingDetailScreen extends ConsumerWidget {
     return const SizedBox.shrink();
   }
 
-  Widget _buildOTPSecurityCard(BookingModel booking, bool isClient, BuildContext context) {
+  Widget _buildOTPSecurityCard(
+    BookingModel booking,
+    bool isClient,
+    BuildContext context,
+  ) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final displayOtp = booking.otp ?? (booking.id.hashCode.abs() % 9000 + 1000).toString();
+    final displayOtp =
+        booking.otp ?? (booking.id.hashCode.abs() % 9000 + 1000).toString();
 
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingLG),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
         border: Border.all(
-          color: isDark ? AppColors.darkBorder : AppColors.border,
-          width: AppDimensions.cardBorderWidth,
+          color: isDark ? AppColors.darkBorder.withValues(alpha: 0.5) : AppColors.border.withValues(alpha: 0.5),
+          width: 1,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: isClient
           ? Column(
@@ -543,7 +719,11 @@ class BookingDetailScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.security_rounded, color: AppColors.success, size: 22),
+                    const Icon(
+                      Icons.security_rounded,
+                      color: AppColors.success,
+                      size: 22,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'START PIN',
@@ -556,9 +736,14 @@ class BookingDetailScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: AppDimensions.paddingMD),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.darkBackground : AppColors.background,
+                    color: isDark
+                        ? AppColors.darkBackground
+                        : AppColors.background,
                     borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
                     border: Border.all(
                       color: isDark ? AppColors.darkBorder : AppColors.border,
@@ -579,7 +764,9 @@ class BookingDetailScreen extends ConsumerWidget {
                 Text(
                   'Share this PIN with your provider when they arrive to start the job.',
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                    color: isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -591,7 +778,11 @@ class BookingDetailScreen extends ConsumerWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.lock_rounded, color: AppColors.accent, size: 20),
+                    const Icon(
+                      Icons.lock_rounded,
+                      color: AppColors.accent,
+                      size: 20,
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       'VERIFICATION REQUIRED',
@@ -606,7 +797,9 @@ class BookingDetailScreen extends ConsumerWidget {
                 Text(
                   'Ask the client for the security PIN shown on their screen to start this job.',
                   style: AppTextStyles.bodyMedium.copyWith(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                    color: isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -615,14 +808,24 @@ class BookingDetailScreen extends ConsumerWidget {
     );
   }
 
-  void _showOTPDialog(BuildContext context, BookingModel booking, String currentUserId) {
-    final displayOtp = booking.otp ?? (booking.id.hashCode.abs() % 9000 + 1000).toString();
+  void _showOTPDialog(
+    BuildContext context,
+    BookingModel booking,
+    String currentUserId,
+  ) {
+    final displayOtp =
+        booking.otp ?? (booking.id.hashCode.abs() % 9000 + 1000).toString();
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => _OTPVerificationDialog(
         expectedOtp: displayOtp,
-        onVerified: () => _updateStatus(context, booking, BookingStatus.inProgress, currentUserId),
+        onVerified: () => _updateStatus(
+          context,
+          booking,
+          BookingStatus.inProgress,
+          currentUserId,
+        ),
       ),
     );
   }
@@ -642,7 +845,10 @@ class _OTPVerificationDialog extends StatefulWidget {
 }
 
 class _OTPVerificationDialogState extends State<_OTPVerificationDialog> {
-  final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
+  final List<TextEditingController> _controllers = List.generate(
+    4,
+    (_) => TextEditingController(),
+  );
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
   String _errorMessage = '';
   bool _isLoading = false;
@@ -695,7 +901,10 @@ class _OTPVerificationDialogState extends State<_OTPVerificationDialog> {
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-        side: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1),
+        side: BorderSide(
+          color: isDark ? AppColors.darkBorder : AppColors.border,
+          width: 1,
+        ),
       ),
       title: Column(
         children: [
@@ -705,7 +914,11 @@ class _OTPVerificationDialogState extends State<_OTPVerificationDialog> {
               color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.security_rounded, color: AppColors.primary, size: 28),
+            child: const Icon(
+              Icons.security_rounded,
+              color: AppColors.primary,
+              size: 28,
+            ),
           ),
           const SizedBox(height: AppDimensions.paddingMD),
           Text(
@@ -723,7 +936,9 @@ class _OTPVerificationDialogState extends State<_OTPVerificationDialog> {
             'Ask the client for the 4-digit security PIN shown on their booking screen to verify arrival.',
             textAlign: TextAlign.center,
             style: AppTextStyles.bodyMedium.copyWith(
-              color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: AppDimensions.paddingXL),
@@ -741,7 +956,9 @@ class _OTPVerificationDialogState extends State<_OTPVerificationDialog> {
                   maxLength: 1,
                   autofocus: index == 0,
                   style: AppTextStyles.headingLarge.copyWith(
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
@@ -749,12 +966,22 @@ class _OTPVerificationDialogState extends State<_OTPVerificationDialog> {
                     counterText: '',
                     contentPadding: EdgeInsets.zero,
                     enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-                      borderSide: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.5),
+                      borderRadius: BorderRadius.circular(
+                        AppDimensions.radiusMD,
+                      ),
+                      borderSide: BorderSide(
+                        color: isDark ? AppColors.darkBorder : AppColors.border,
+                        width: 1.5,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-                      borderSide: const BorderSide(color: AppColors.primary, width: 2),
+                      borderRadius: BorderRadius.circular(
+                        AppDimensions.radiusMD,
+                      ),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
                     ),
                   ),
                   onChanged: (value) {
@@ -779,7 +1006,10 @@ class _OTPVerificationDialogState extends State<_OTPVerificationDialog> {
             const SizedBox(height: AppDimensions.paddingMD),
             Text(
               _errorMessage,
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.error, fontWeight: FontWeight.w600),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.error,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ],
         ],

@@ -51,7 +51,8 @@ class PublicProviderProfileScreen extends ConsumerWidget {
                         AppAvatar(
                           imageUrl: provider.profilePhoto,
                           name: provider.name,
-                          size: 80,
+                          size: 90,
+                          isVerified: provider.isVerified,
                         ),
                         if (provider.isOnline)
                           Positioned(

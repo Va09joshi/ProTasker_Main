@@ -36,6 +36,9 @@ import '../../features/profile/screens/notification_screen.dart';
 import '../../features/location/screens/map_picker_screen.dart';
 import '../../features/services/screens/category_providers_screen.dart';
 import '../../features/booking/screens/direct_booking_screen.dart';
+import '../../features/advertising/screens/admin_ads_dashboard.dart';
+import '../../features/advertising/screens/admin_ad_editor_screen.dart';
+import '../../features/advertising/models/custom_ad_model.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _clientShellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'clientShell');
@@ -333,6 +336,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           final lat = double.tryParse(state.uri.queryParameters['lat'] ?? '');
           final lng = double.tryParse(state.uri.queryParameters['lng'] ?? '');
           return MapPickerScreen(initialLat: lat, initialLng: lng);
+        },
+      ),
+      GoRoute(
+        path: '/admin/ads',
+        name: 'adminAds',
+        builder: (context, state) => const AdminAdsDashboardScreen(),
+      ),
+      GoRoute(
+        path: '/admin/ads/edit',
+        name: 'adminAdEditor',
+        builder: (context, state) {
+          final ad = state.extra as CustomAdModel?;
+          return AdminAdEditorScreen(existingAd: ad);
         },
       ),
     ],

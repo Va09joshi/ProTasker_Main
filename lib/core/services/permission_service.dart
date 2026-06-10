@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:permission_handler/permission_handler.dart' as permission_handler;
 
@@ -42,6 +44,17 @@ class PermissionService {
   }
 
   static Future<bool> requestNotificationPermission() async {
+    try {
+      final settings = await FirebaseMessaging.instance.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      debugPrint('FCM permission status: ${settings.authorizationStatus}');
+    } catch (e) {
+      debugPrint('Failed to request Firebase notification permission: $e');
+    }
+
     final status = await Permission.notification.status;
     if (status.isGranted) return true;
     

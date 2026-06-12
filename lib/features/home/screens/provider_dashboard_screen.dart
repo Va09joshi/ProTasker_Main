@@ -13,6 +13,7 @@ import '../../../core/router/route_names.dart';
 
 import '../../location/screens/map_picker_screen.dart';
 import '../../../core/services/location_service.dart';
+import '../../booking/screens/proof_upload_bottom_sheet.dart';
 
 class ProviderDashboardScreen extends ConsumerStatefulWidget {
   const ProviderDashboardScreen({super.key});
@@ -81,6 +82,14 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
           ),
         );
       },
+    );
+  }
+
+  void _openProofSheet(BuildContext context, BookingModel booking) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) => ProofUploadBottomSheet(booking: booking),
     );
   }
 
@@ -527,20 +536,42 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                         ),
                       ),
                       const SizedBox(width: AppDimensions.padding12),
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.success,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            minimumSize: const Size(0, AppDimensions.touchTarget),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusSM)),
+                      if (booking.status == BookingStatus.accepted)
+                        Expanded(
+                          child: AppButton(
+                            label: 'On My Way',
+                            onPressed: () => _updateBookingStatus(context, booking.id, BookingStatus.onTheWay),
                           ),
-                          icon: const Icon(Icons.check_rounded, size: 20),
-                          label: const Text('Complete', style: AppTextStyles.labelLarge),
-                          onPressed: () => _updateBookingStatus(context, booking.id, BookingStatus.completed),
+                        )
+                      else if (booking.status == BookingStatus.onTheWay)
+                        Expanded(
+                          child: AppButton(
+                            label: 'Start Job',
+                            onPressed: () => _updateBookingStatus(context, booking.id, BookingStatus.inProgress),
+                          ),
+                        )
+                      else if (booking.status == BookingStatus.inProgress)
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              minimumSize: const Size(0, AppDimensions.touchTarget),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusSM)),
+                            ),
+                            icon: const Icon(Icons.check_rounded, size: 20),
+                            label: const Text('Complete', style: AppTextStyles.labelLarge),
+                            onPressed: () => _openProofSheet(context, booking),
+                          ),
+                        )
+                      else
+                        Expanded(
+                          child: AppButton(
+                            label: 'View',
+                            onPressed: () => context.push('/booking/${booking.id}'),
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 ],

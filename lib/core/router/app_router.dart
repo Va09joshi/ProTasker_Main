@@ -8,6 +8,7 @@ import '../../features/auth/screens/screens.dart';
 
 import '../../features/home/screens/client_shell.dart';
 import '../../features/home/screens/client_home_screen.dart';
+import '../../features/location/screens/client_map_screen.dart';
 import '../../features/booking/screens/client_bookings_screen.dart';
 import '../../features/profile/screens/client_profile_screen.dart';
 import '../../features/profile/screens/help_center_screen.dart';
@@ -39,6 +40,7 @@ import '../../features/booking/screens/direct_booking_screen.dart';
 import '../../features/advertising/screens/admin_ads_dashboard.dart';
 import '../../features/advertising/screens/admin_ad_editor_screen.dart';
 import '../../features/advertising/models/custom_ad_model.dart';
+import '../../features/notifications/presentation/screens/notification_settings_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _clientShellNavigatorKey = GlobalKey<NavigatorState>(debugLabel: 'clientShell');
@@ -168,6 +170,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/client/bookings',
             pageBuilder: (context, state) => _buildPageWithFadeTransition(context, state, const ClientBookingsScreen()),
+          ),
+          GoRoute(
+            path: '/client/map',
+            pageBuilder: (context, state) => _buildPageWithFadeTransition(context, state, const ClientMapScreen()),
           ),
           GoRoute(
             path: '/client/chat',
@@ -318,6 +324,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/notifications',
         name: 'notifications',
         builder: (context, state) => const NotificationScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.notificationSettings,
+        name: RouteNames.notificationSettings,
+        builder: (context, state) => const NotificationSettingsScreen(),
       ),
       GoRoute(
         path: '/help-center',

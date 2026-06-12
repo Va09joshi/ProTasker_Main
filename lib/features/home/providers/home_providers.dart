@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../../shared/providers/user_session_provider.dart';
 import '../../../shared/models/models.dart';
 import '../../jobs/repositories/job_repository.dart';
@@ -75,12 +76,20 @@ final myJobPostsProvider = StreamProvider.autoDispose<List<JobPost>>((ref) {
   return repo.getClientJobs(user.uid);
 });
 
+class MapCenterNotifier extends Notifier<LatLng?> {
+  @override
+  LatLng? build() => null;
+}
+
+final mapCenterProvider = NotifierProvider<MapCenterNotifier, LatLng?>(MapCenterNotifier.new);
+
 final nearbyProvidersProvider = StreamProvider.autoDispose<List<UserModel>>((ref) {
   final user = ref.watch(currentUserProvider).value;
   if (user == null) return Stream.value([]);
   
-  final userLat = user.address.lat;
-  final userLng = user.address.lng;
+  final mapCenter = ref.watch(mapCenterProvider);
+  final userLat = mapCenter?.latitude ?? user.address.lat;
+  final userLng = mapCenter?.longitude ?? user.address.lng;
 
   return FirebaseFirestore.instance
       .collection('users')

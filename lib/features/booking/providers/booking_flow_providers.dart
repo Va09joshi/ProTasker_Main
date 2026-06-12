@@ -12,6 +12,7 @@ class BookingFlowState {
   final List<String> specialInstructions;
   final List<File> tempPhotos;
   final bool isLoading;
+  final bool isEmergency;
 
   BookingFlowState({
     this.currentStep = 0,
@@ -22,6 +23,7 @@ class BookingFlowState {
     this.specialInstructions = const [],
     this.tempPhotos = const [],
     this.isLoading = false,
+    this.isEmergency = false,
   });
 
   BookingFlowState copyWith({
@@ -33,6 +35,7 @@ class BookingFlowState {
     List<String>? specialInstructions,
     List<File>? tempPhotos,
     bool? isLoading,
+    bool? isEmergency,
   }) {
     return BookingFlowState(
       currentStep: currentStep ?? this.currentStep,
@@ -43,6 +46,7 @@ class BookingFlowState {
       specialInstructions: specialInstructions ?? this.specialInstructions,
       tempPhotos: tempPhotos ?? this.tempPhotos,
       isLoading: isLoading ?? this.isLoading,
+      isEmergency: isEmergency ?? this.isEmergency,
     );
   }
 }
@@ -60,6 +64,7 @@ class BookingFlowNotifier extends Notifier<BookingFlowState> {
   void setTimeSlot(String slot) => state = state.copyWith(timeSlot: slot);
   void setAddress(Address addr) => state = state.copyWith(address: addr);
   void setNotes(String notes) => state = state.copyWith(notes: notes);
+  void toggleEmergency(bool val) => state = state.copyWith(isEmergency: val);
   
   void toggleInstruction(String inst) {
     final list = List<String>.from(state.specialInstructions);

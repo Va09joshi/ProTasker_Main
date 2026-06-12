@@ -20,8 +20,9 @@ class _ClientShellState extends ConsumerState<ClientShell> {
   int _calculateSelectedIndex(BuildContext context) {
     final String location = GoRouterState.of(context).matchedLocation;
     if (location.startsWith('/client/bookings')) return 1;
-    if (location.startsWith('/client/chat')) return 2;
-    if (location.startsWith('/client/profile')) return 3;
+    if (location.startsWith('/client/map')) return 2;
+    if (location.startsWith('/client/chat')) return 3;
+    if (location.startsWith('/client/profile')) return 4;
     return 0;
   }
 
@@ -34,9 +35,12 @@ class _ClientShellState extends ConsumerState<ClientShell> {
         context.go('/client/bookings');
         break;
       case 2:
-        context.go('/client/chat');
+        context.go('/client/map');
         break;
       case 3:
+        context.go('/client/chat');
+        break;
+      case 4:
         context.go('/client/profile');
         break;
     }
@@ -81,9 +85,17 @@ class _ClientShellState extends ConsumerState<ClientShell> {
                   ),
                   _buildNavItem(
                     context: context,
+                    imagePath: 'assets/icons/maps.png',
+                    label: 'Map',
+                    index: 2,
+                    currentIndex: currentIndex,
+                    iconSize: 28, // Make the map icon slightly bigger
+                  ),
+                  _buildNavItem(
+                    context: context,
                     imagePath: 'assets/icons/chat.png',
                     label: 'Chat',
-                    index: 2,
+                    index: 3,
                     currentIndex: currentIndex,
                     badgeCount: unreadChatsCount,
                   ),
@@ -91,7 +103,7 @@ class _ClientShellState extends ConsumerState<ClientShell> {
                     context: context,
                     imagePath: 'assets/icons/profile.png',
                     label: 'Profile',
-                    index: 3,
+                    index: 4,
                     currentIndex: currentIndex,
                   ),
                 ],
@@ -105,21 +117,21 @@ class _ClientShellState extends ConsumerState<ClientShell> {
 
   Widget _buildNavItem({
     required BuildContext context,
-    required String imagePath,
+    String? imagePath,
+    IconData? iconData,
     required String label,
     required int index,
     required int currentIndex,
     int badgeCount = 0,
+    double iconSize = 24,
   }) {
     final isSelected = index == currentIndex;
     final color = isSelected ? AppColors.primary : AppColors.textTertiary;
     
-    Widget iconWidget = Image.asset(
-      imagePath,
-      width: 24,
-      height: 24,
-      color: color,
-    );
+    Widget iconWidget = imagePath != null 
+        ? Image.asset(imagePath, width: iconSize, height: iconSize, color: color)
+        : Icon(iconData, size: iconSize, color: color);
+
     if (badgeCount > 0) {
       iconWidget = Badge(
         label: Text(badgeCount.toString()),

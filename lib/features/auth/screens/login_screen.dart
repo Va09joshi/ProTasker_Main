@@ -9,6 +9,7 @@ import '../providers/auth_provider.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../shared/widgets/widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../core/feedback/services/feedback_service.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -28,6 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  int _loadingType = 0;
 
   @override
   void initState() {
@@ -72,6 +74,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
   void _login() async {
     if (_formKey.currentState!.validate()) {
+      setState(() { _loadingType = 1; });
       final prefs = await SharedPreferences.getInstance();
       if (_rememberMe) {
         await prefs.setString('remembered_email', _emailController.text.trim());
@@ -83,11 +86,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             _emailController.text.trim(),
             _passwordController.text,
           );
+      if (mounted) {
+        setState(() { _loadingType = 0; });
+      }
     }
   }
 
   void _loginWithGoogle() async {
+    setState(() { _loadingType = 2; });
     await ref.read(authNotifierProvider.notifier).loginWithGoogle();
+    if (mounted) {
+      setState(() { _loadingType = 0; });
+    }
   }
 
   void _forgotPassword() {
@@ -144,7 +154,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     ref.listen(authNotifierProvider, (previous, next) {
       next.whenOrNull(
         error: (error, stack) {
-          SnackbarHelper.error(context, error.toString());
+          // Use the new FeedbackService to safely map and show the error!
+          ref.read(feedbackServiceProvider).handleError(error);
         },
       );
     });
@@ -289,8 +300,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                       // Sign In Button
                       AppButton(
                         label: 'Sign In',
-                        isLoading: isLoading,
-                        onPressed: _login,
+                        isLoading: isLoading && _loadingType == 1,
+                        onPressed: isLoading ? null : _login,
                       ),
                       const SizedBox(height: AppDimensions.paddingLG),
 
@@ -304,8 +315,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                           errorBuilder: (context, error, stackTrace) => const FaIcon(FontAwesomeIcons.google, size: 20),
                         ),
                         variant: ButtonVariant.secondary,
-                        isLoading: isLoading,
-                        onPressed: _loginWithGoogle,
+                        isLoading: isLoading && _loadingType == 2,
+                        onPressed: isLoading ? null : _loginWithGoogle,
                       ),
                       const SizedBox(height: AppDimensions.paddingXL),
 

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/custom_ad_model.dart';
 
@@ -27,9 +28,26 @@ class CustomAdRepository {
   }
 
   Future<void> incrementClick(String adId) async {
-    await _firestore.collection(_collection).doc(adId).update({
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    final batch = _firestore.batch();
+    
+    // 1. Increment global ad clicks count
+    final adRef = _firestore.collection(_collection).doc(adId);
+    batch.update(adRef, {
       'clicks': FieldValue.increment(1),
     });
+
+    // 2. Proper Logic: Track exactly which user clicked the ad
+    if (userId != null) {
+      final clickRef = _firestore.collection('ad_clicks').doc();
+      batch.set(clickRef, {
+        'adId': adId,
+        'userId': userId,
+        'timestamp': FieldValue.serverTimestamp(),
+      });
+    }
+
+    await batch.commit();
   }
 
   Stream<List<CustomAdModel>> getActiveAds() {

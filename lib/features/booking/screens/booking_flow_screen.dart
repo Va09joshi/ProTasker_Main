@@ -122,7 +122,8 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
         lng: clientUser.address.lng,
       );
 
-      final grossPrice = service.basePrice;
+      final priorityFee = state.isEmergency ? 299.0 : 0.0;
+      final grossPrice = service.basePrice + priorityFee;
       final platformFee = grossPrice * 0.10;
       final netPrice = grossPrice - platformFee;
 
@@ -158,6 +159,8 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         otp: (Random().nextInt(9000) + 1000).toString(),
+        isEmergency: state.isEmergency,
+        priorityFee: priorityFee,
       );
 
       batch.set(bookingRef, booking.toMap());
@@ -433,7 +436,57 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
             const Text('Select Time Slot', style: AppTextStyles.headingLarge),
             const SizedBox(height: AppDimensions.paddingMD),
             _buildTimeSlots(service.providerId, state.selectedDate!),
+            const SizedBox(height: AppDimensions.paddingXL),
+            _buildEmergencyToggle(state, notifier),
           ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencyToggle(BookingFlowState state, BookingFlowNotifier notifier) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingLG),
+      decoration: BoxDecoration(
+        color: state.isEmergency ? AppColors.warning.withValues(alpha: 0.1) : AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        border: Border.all(
+          color: state.isEmergency ? AppColors.warning : AppColors.border,
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: state.isEmergency ? AppColors.warning : AppColors.surfaceAlt,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.flash_on_rounded,
+              color: state.isEmergency ? Colors.white : AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(width: AppDimensions.paddingMD),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('Emergency Booking', style: AppTextStyles.labelLarge),
+                const SizedBox(height: 4),
+                Text(
+                  'Priority service for an extra ₹299.',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          Switch(
+            value: state.isEmergency,
+            activeColor: AppColors.warning,
+            onChanged: (val) => notifier.toggleEmergency(val),
+          ),
         ],
       ),
     );
@@ -607,7 +660,8 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
           const SizedBox(height: AppDimensions.paddingXL),
           AppTextField(
             controller: _notesCtrl,
-            label: 'Additional Notes (Optional)',
+            label: 'Describe the Problem',
+            hint: 'Provide details about the issue...',
             maxLines: 4,
           ),
           const SizedBox(height: AppDimensions.paddingXL),
@@ -708,7 +762,8 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
     UserModel provider,
   ) {
     final state = ref.watch(bookingFlowProvider);
-    final gross = service.basePrice;
+    final priorityFee = state.isEmergency ? 299.0 : 0.0;
+    final gross = service.basePrice + priorityFee;
     final fee = gross * 0.10;
     final total = gross + fee;
 
@@ -772,11 +827,27 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
               children: [
                 const Text('Base Price', style: AppTextStyles.bodyMedium),
                 Text(
-                  '₹${gross.toStringAsFixed(2)}',
+                  '₹${service.basePrice.toStringAsFixed(2)}',
                   style: AppTextStyles.bodyMedium,
                 ),
               ],
             ),
+            if (state.isEmergency) ...[
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Emergency Fee',
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warning),
+                  ),
+                  Text(
+                    '+ ₹299.00',
+                    style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warning),
+                  ),
+                ],
+              ),
+            ],
             const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,

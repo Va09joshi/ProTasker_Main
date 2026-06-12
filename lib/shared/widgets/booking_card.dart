@@ -92,6 +92,29 @@ class BookingCard extends StatelessWidget {
                       // Top row: category + status
                       Row(
                         children: [
+                          if (booking.isEmergency)
+                            Container(
+                              margin: const EdgeInsets.only(right: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: AppColors.warning.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.flash_on_rounded, size: 10, color: AppColors.warning),
+                                  const SizedBox(width: 2),
+                                  Text(
+                                    'EMERGENCY',
+                                    style: AppTextStyles.caption.copyWith(
+                                      color: AppColors.warning,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           Text(
                             booking.serviceCategory.name.toUpperCase(),
                             style: AppTextStyles.caption.copyWith(

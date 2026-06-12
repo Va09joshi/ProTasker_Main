@@ -1,3 +1,4 @@
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -12,6 +13,54 @@ import '../../../shared/models/models.dart';
 import '../../booking/repositories/booking_repository.dart';
 import 'accept_job_sheet.dart';
 import '../../../core/services/notification_service.dart';
+
+final jobMarkerProvider = FutureProvider.family<BitmapDescriptor, String>((ref, category) async {
+  IconData iconData = Icons.work_outline;
+  final catLower = category.toLowerCase();
+  if (catLower.contains('clean')) iconData = Icons.cleaning_services_rounded;
+  else if (catLower.contains('plumb')) iconData = Icons.plumbing_rounded;
+  else if (catLower.contains('electric')) iconData = Icons.electrical_services_rounded;
+  else if (catLower.contains('paint')) iconData = Icons.format_paint_rounded;
+  else if (catLower.contains('carpent')) iconData = Icons.handyman_rounded;
+  else if (catLower.contains('appliance')) iconData = Icons.home_repair_service_rounded;
+  else if (catLower.contains('shift') || catLower.contains('mov')) iconData = Icons.local_shipping_rounded;
+
+  final ui.PictureRecorder pictureRecorder = ui.PictureRecorder();
+  final Canvas canvas = Canvas(pictureRecorder);
+  
+  // Draw marker shape
+  final Paint paint = Paint()..color = AppColors.primary;
+  final Paint shadowPaint = Paint()
+    ..color = const Color(0x4D000000)
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4.0);
+  
+  // Shadow
+  canvas.drawCircle(const Offset(40, 44), 36, shadowPaint);
+  // Main circle
+  canvas.drawCircle(const Offset(40, 40), 36, paint);
+  
+  // Inner circle
+  final Paint innerPaint = Paint()..color = Colors.white;
+  canvas.drawCircle(const Offset(40, 40), 30, innerPaint);
+
+  TextPainter textPainter = TextPainter(textDirection: ui.TextDirection.ltr);
+  textPainter.text = TextSpan(
+    text: String.fromCharCode(iconData.codePoint),
+    style: TextStyle(
+      fontSize: 36.0,
+      fontFamily: iconData.fontFamily,
+      package: iconData.fontPackage,
+      color: AppColors.primary,
+    ),
+  );
+  textPainter.layout();
+  textPainter.paint(canvas, Offset(40 - (textPainter.width / 2), 40 - (textPainter.height / 2)));
+
+  final img = await pictureRecorder.endRecording().toImage(80, 80);
+  final data = await img.toByteData(format: ui.ImageByteFormat.png);
+  
+  return BitmapDescriptor.fromBytes(data!.buffer.asUint8List());
+});
 
 class JobDetailScreen extends ConsumerWidget {
   final String jobId;
@@ -297,22 +346,26 @@ class JobDetailScreen extends ConsumerWidget {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(11),
-                          child: GoogleMap(
-                            initialCameraPosition: CameraPosition(
-                              target: LatLng(job.latitude, job.longitude),
-                              zoom: 14.0,
-                            ),
-                            markers: {
-                              Marker(
-                                markerId: const MarkerId('job_location'),
-                                position: LatLng(job.latitude, job.longitude),
-                                icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed),
+                          child: ref.watch(jobMarkerProvider(job.category)).when(
+                            data: (markerIcon) => GoogleMap(
+                              initialCameraPosition: CameraPosition(
+                                target: LatLng(job.latitude, job.longitude),
+                                zoom: 14.0,
                               ),
-                            },
-                            zoomControlsEnabled: false,
-                            mapToolbarEnabled: false,
-                            myLocationButtonEnabled: false,
-                            liteModeEnabled: true, // Optimizes the map
+                              markers: {
+                                Marker(
+                                  markerId: const MarkerId('job_location'),
+                                  position: LatLng(job.latitude, job.longitude),
+                                  icon: markerIcon,
+                                ),
+                              },
+                              zoomControlsEnabled: false,
+                              mapToolbarEnabled: false,
+                              myLocationButtonEnabled: false,
+                              liteModeEnabled: true, // Optimizes the map
+                            ),
+                            loading: () => const Center(child: CircularProgressIndicator()),
+                            error: (_, __) => const Center(child: Text('Map Error')),
                           ),
                         ),
                       ),

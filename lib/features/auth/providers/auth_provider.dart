@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../shared/models/models.dart';
 import '../repositories/auth_repository.dart';
-import '../../../core/services/notification_service.dart';
+import '../../../features/notifications/services/notification_service.dart';
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
@@ -20,7 +20,8 @@ class AuthNotifier extends AsyncNotifier<void> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final user = await _repository.signInWithEmail(email, password);
-      await NotificationService.subscribeToUser(user.uid);
+      await FcmNotificationService.initialize();
+      await FcmNotificationService.syncToken();
     });
   }
 
@@ -34,7 +35,8 @@ class AuthNotifier extends AsyncNotifier<void> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final user = await _repository.signUpWithEmail(name, email, phone, password, role);
-      await NotificationService.subscribeToUser(user.uid);
+      await FcmNotificationService.initialize();
+      await FcmNotificationService.syncToken();
     });
   }
 
@@ -42,15 +44,16 @@ class AuthNotifier extends AsyncNotifier<void> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final user = await _repository.signInWithGoogle();
-      await NotificationService.subscribeToUser(user.uid);
+      await FcmNotificationService.initialize();
+      await FcmNotificationService.syncToken();
     });
   }
 
   Future<void> logout() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
+      await FcmNotificationService.removeTokenFromFirestore();
       await _repository.signOut();
-      await NotificationService.clearSubscriptions();
     });
   }
 

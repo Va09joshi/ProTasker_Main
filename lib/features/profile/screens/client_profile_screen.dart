@@ -463,26 +463,7 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
             ],
           ),
         ),
-        const SizedBox(height: AppDimensions.paddingLG),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG, vertical: AppDimensions.paddingSM),
-          child: Text('Admin', style: AppTextStyles.headingMedium),
-        ),
-        Container(
-          margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-            border: Border.all(color: AppColors.border, width: AppDimensions.cardBorderWidth),
-          ),
-          child: ListTile(
-            leading: const Icon(Icons.campaign_rounded, color: AppColors.textSecondary),
-            title: Text('Manage Ads', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
-            trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary, size: 20),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppDimensions.radiusLG)),
-            onTap: () => context.push('/admin/ads'),
-          ),
-        ),
+
         const SizedBox(height: AppDimensions.paddingLG),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG),

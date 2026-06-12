@@ -23,6 +23,7 @@ class RoutePaths {
   static const String login = '/login';
   static const String signup = '/signup';
   static const String profileSetup = '/profile-setup';
+  static const String notificationSettings = '/notification-settings';
   static const String clientHome = '/client/home';
   static const String providerDashboard = '/provider/dashboard';
   static const String postJob = '/client/post-job';

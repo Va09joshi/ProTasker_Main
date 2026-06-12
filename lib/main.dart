@@ -13,8 +13,9 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'features/profile/providers/profile_providers.dart';
-import 'core/services/notification_service.dart';
+import 'features/notifications/services/notification_service.dart';
 import 'core/services/permission_service.dart';
+import 'core/feedback/feedback_globals.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,9 +58,9 @@ class _MyAppState extends ConsumerState<MyApp> {
     PermissionService.requestLocationPermission();
     FirebaseAuth.instance.authStateChanges().listen((user) {
       if (user != null) {
-        NotificationService.subscribeToUser(user.uid);
+        // NotificationService.subscribeToUser(user.uid);
       } else {
-        NotificationService.clearSubscriptions();
+        // NotificationService.clearSubscriptions();
       }
     });
   }
@@ -72,7 +73,7 @@ class _MyAppState extends ConsumerState<MyApp> {
 
   Future<void> _initializeNotifications() async {
     await PermissionService.requestNotificationPermission();
-    await NotificationService.initializePushDiagnostics();
+    await FcmNotificationService.initialize();
   }
 
   @override
@@ -81,6 +82,7 @@ class _MyAppState extends ConsumerState<MyApp> {
     ref.watch(isDarkModeProvider);
 
     return MaterialApp.router(
+      scaffoldMessengerKey: scaffoldMessengerKey,
       title: 'ProTasker',
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

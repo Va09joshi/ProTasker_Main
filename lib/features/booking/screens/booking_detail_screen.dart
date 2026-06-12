@@ -216,6 +216,11 @@ class BookingDetailScreen extends ConsumerWidget {
                       _buildPartyCard(booking, isClient, context, ref),
                       const SizedBox(height: AppDimensions.paddingMD),
 
+                      if (booking.notes != null && booking.notes!.isNotEmpty) ...[
+                        _buildProblemDescriptionCard(booking),
+                        const SizedBox(height: AppDimensions.paddingMD),
+                      ],
+
                       _buildPriceBreakdownCard(booking),
                       const SizedBox(height: AppDimensions.paddingMD),
 
@@ -285,18 +290,38 @@ class BookingDetailScreen extends ConsumerWidget {
                   style: AppTextStyles.headingLarge,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppColors.accent.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
-                ),
-                child: Text(
-                  booking.serviceCategory.name,
-                  style: AppTextStyles.labelSmall.copyWith(
-                    color: AppColors.accent,
+              Row(
+                children: [
+                  if (booking.isEmergency)
+                    Container(
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppColors.warning.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                      ),
+                      child: Text(
+                        'EMERGENCY',
+                        style: AppTextStyles.labelSmall.copyWith(
+                          color: AppColors.warning,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                    ),
+                    child: Text(
+                      booking.serviceCategory.name,
+                      style: AppTextStyles.labelSmall.copyWith(
+                        color: AppColors.accent,
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ],
           ),
@@ -465,11 +490,27 @@ class BookingDetailScreen extends ConsumerWidget {
             children: [
               const Text('Gross Amount', style: AppTextStyles.bodyMedium),
               Text(
-                '₹${booking.grossPrice.toStringAsFixed(2)}',
+                '₹${(booking.grossPrice - booking.priorityFee).toStringAsFixed(2)}',
                 style: AppTextStyles.bodyMedium,
               ),
             ],
           ),
+          if (booking.isEmergency) ...[
+            const SizedBox(height: AppDimensions.paddingSM),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Emergency Priority Fee',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warning),
+                ),
+                Text(
+                  '+ ₹${booking.priorityFee.toStringAsFixed(2)}',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.warning),
+                ),
+              ],
+            ),
+          ],
           const SizedBox(height: AppDimensions.paddingSM),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -515,6 +556,38 @@ class BookingDetailScreen extends ConsumerWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProblemDescriptionCard(BookingModel booking) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingLG),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        border: Border.all(
+          color: AppColors.border.withValues(alpha: 0.5),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 16,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text('Problem Description / Notes', style: AppTextStyles.headingLarge),
+          const SizedBox(height: AppDimensions.paddingMD),
+          Text(
+            booking.notes!,
+            style: AppTextStyles.bodyMedium,
           ),
         ],
       ),

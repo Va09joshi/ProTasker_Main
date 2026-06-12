@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:googleapis_auth/auth_io.dart';
 
 class NotificationService {
   static const MethodChannel _channel = MethodChannel('com.protasker/pusher');
@@ -39,7 +40,7 @@ class NotificationService {
   static Future<void> subscribeToUser(String uid) async {
     try {
       final interest = 'user-$uid';
-      await _channel.invokeMethod('setInterest', {'interest': interest});
+      // await _channel.invokeMethod('setInterest', {'interest': interest});
       debugPrint('Subscribed to $interest');
     } catch (e) {
       debugPrint('Failed to subscribe to pusher interest: $e');
@@ -49,48 +50,78 @@ class NotificationService {
   /// Call this when the user logs out
   static Future<void> clearSubscriptions() async {
     try {
-      await _channel.invokeMethod('clearInterests');
+      // await _channel.invokeMethod('clearInterests');
       debugPrint('Cleared Pusher interests');
     } catch (e) {
       debugPrint('Failed to clear pusher interests: $e');
     }
   }
 
-  /// Sends a push notification to a specific user using Pusher Beams Publish API
+  /// Sends a push notification directly from the client using FCM HTTP v1 API
   static Future<void> sendNotification({
     required String targetUid,
     required String title,
     required String body,
   }) async {
     try {
-      final secretKey = dotenv.env['PUSHER_BEAMS_SECRET_KEY'];
-      
-      if (secretKey == null || secretKey.isEmpty || secretKey == 'YOUR_PUSHER_SECRET_KEY_HERE') {
-        debugPrint('WARNING: PUSHER_BEAMS_SECRET_KEY is not set in .env file. Notification will not be sent.');
+      // 1. Fetch the target user's FCM Token from Firestore
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(targetUid).get();
+      if (!userDoc.exists) {
+        debugPrint('Target user not found');
         return;
       }
 
-      final url = Uri.parse('https://$_instanceId.pushnotifications.pusher.com/publish_api/v1/instances/$_instanceId/publishes');
-      
+      final fcmToken = userDoc.data()?['fcmToken'] as String?;
+      if (fcmToken == null || fcmToken.isEmpty) {
+        debugPrint('Target user has no FCM token. Cannot send push notification.');
+        return;
+      }
+
+      // 2. Load the Service Account from assets and get OAuth2 Token
+      String serviceAccountJson;
+      try {
+        serviceAccountJson = await rootBundle.loadString('assets/service_account.json');
+      } catch (e) {
+        debugPrint('WARNING: assets/service_account.json not found! Cannot send FCM push.');
+        return;
+      }
+
+      final credentials = ServiceAccountCredentials.fromJson(serviceAccountJson);
+      final client = await clientViaServiceAccount(
+        credentials,
+        ['https://www.googleapis.com/auth/firebase.messaging'],
+      );
+
+      final accessToken = client.credentials.accessToken.data;
+      client.close();
+
+      // 3. Send the POST Request to FCM
+      final projectId = 'protasker-3bf46';
+      final url = Uri.parse('https://fcm.googleapis.com/v1/projects/$projectId/messages:send');
+
+      final payload = {
+        'message': {
+          'token': fcmToken,
+          'notification': {
+            'title': title,
+            'body': body,
+          },
+        }
+      };
+
       final response = await http.post(
         url,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $secretKey',
+          'Authorization': 'Bearer $accessToken',
         },
-        body: jsonEncode({
-          'interests': ['user-$targetUid'],
-          'fcm': {
-            'notification': {
-              'title': title,
-              'body': body,
-            }
-          }
-        }),
+        body: jsonEncode(payload),
       );
 
-      if (response.statusCode != 200) {
-        debugPrint('Failed to send notification: ${response.body}');
+      if (response.statusCode == 200) {
+        debugPrint('Successfully sent push notification to $targetUid');
+      } else {
+        debugPrint('Failed to send notification: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       debugPrint('Error sending push notification: $e');

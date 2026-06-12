@@ -59,6 +59,9 @@ app.*.map.json
 **/GoogleService-Info.plist
 firebase_options.dart
 lib/firebase_options.dart
+service_account.json
+assets/service_account.json
+*service_account*.json
 
 # Android signing
 *.jks

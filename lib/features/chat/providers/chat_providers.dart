@@ -34,9 +34,30 @@ final unreadChatsCountProvider = Provider.autoDispose<int>((ref) {
   return count;
 });
 
+class ChatLimitsNotifier extends Notifier<Map<String, int>> {
+  @override
+  Map<String, int> build() {
+    return {};
+  }
+
+  void increment(String chatId) {
+    final current = state[chatId] ?? 50;
+    state = {
+      ...state,
+      chatId: current + 50,
+    };
+  }
+}
+
+final chatLimitsProvider = NotifierProvider<ChatLimitsNotifier, Map<String, int>>(
+  ChatLimitsNotifier.new,
+);
+
 final chatMessagesStreamProvider = StreamProvider.autoDispose.family<List<MessageModel>, String>((ref, chatId) {
+  final limits = ref.watch(chatLimitsProvider);
+  final limit = limits[chatId] ?? 50;
   final repo = ref.watch(chatRepositoryProvider);
-  return repo.getMessages(chatId);
+  return repo.getMessages(chatId, limit: limit);
 });
 
 final typingStatusStreamProvider = StreamProvider.autoDispose.family<bool, ({String chatId, String otherUserId})>((ref, args) {

@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../../../shared/models/models.dart';
 import '../../../core/errors/app_exception.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class AuthRepository {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -11,6 +12,11 @@ class AuthRepository {
 
   Future<UserModel> signUpWithEmail(String name, String email, String phone, String password, UserRole role) async {
     try {
+      final phoneQuery = await _firestore.collection('users').where('phone', isEqualTo: phone).get();
+      if (phoneQuery.docs.isNotEmpty) {
+        throw AppException.auth('Phone number is already in use by another account.');
+      }
+
       final userCredential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
       final user = userCredential.user;
       if (user == null) {
@@ -31,6 +37,9 @@ class AuthRepository {
       await _firestore.collection('users').doc(user.uid).set(userModel.toMap());
       return userModel;
     } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        throw AppException.auth('Email is already occupied by another account.');
+      }
       throw AppException.auth(e.message ?? 'An error occurred during sign up.');
     } catch (e) {
       throw AppException.auth('An unknown error occurred.');
@@ -61,7 +70,7 @@ class AuthRepository {
   Future<UserModel> signInWithGoogle() async {
     try {
       await _googleSignIn.initialize(
-        serverClientId: '832328920163-g39hgsatrajd86cg0utfbrsr98vcmafv.apps.googleusercontent.com',
+        serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ?? '',
       );
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
       

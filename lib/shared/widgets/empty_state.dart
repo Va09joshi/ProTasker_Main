@@ -29,10 +29,10 @@ class EmptyState extends StatelessWidget {
           children: [
             Image.asset(
               AppImages.emptyState,
-              height: 140,
+              height: 100,
               fit: BoxFit.contain,
             ),
-            const SizedBox(height: AppDimensions.paddingLG),
+            const SizedBox(height: AppDimensions.paddingMD),
             Text(
               title,
               style: AppTextStyles.headingMedium,

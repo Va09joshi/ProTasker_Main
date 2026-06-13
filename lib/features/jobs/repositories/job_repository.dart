@@ -22,6 +22,7 @@ class JobRepository {
         .collection(_collection)
         .where('status', isEqualTo: 'open')
         .orderBy('createdAt', descending: true)
+        .limit(20)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => JobPost.fromMap(doc.data(), doc.id))
@@ -34,6 +35,7 @@ class JobRepository {
         .collection(_collection)
         .where('clientId', isEqualTo: clientId)
         .orderBy('createdAt', descending: true)
+        .limit(20)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => JobPost.fromMap(doc.data(), doc.id))

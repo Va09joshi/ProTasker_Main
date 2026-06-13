@@ -200,7 +200,7 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
         title: const Text('Choose Location'),
       ),
       body: _initialPosition == null
-          ? const Center(child: CircularProgressIndicator())
+          ? Center(child: Image.asset('assets/images/technical-service.gif', width: 80, height: 80))
           : Stack(
               children: [
                 ClipRect(

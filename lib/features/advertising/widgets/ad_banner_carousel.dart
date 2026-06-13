@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../../core/theme/theme.dart';
 import '../../../shared/models/ad_model.dart';
 import '../providers/ad_provider.dart';
@@ -55,6 +57,29 @@ class _AdCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () async {
+        // Record Click
+        final userId = FirebaseAuth.instance.currentUser?.uid;
+        final batch = FirebaseFirestore.instance.batch();
+        
+        batch.update(FirebaseFirestore.instance.collection('ads').doc(ad.id), {
+          'clicks': FieldValue.increment(1),
+        });
+
+        if (userId != null) {
+          final clickRef = FirebaseFirestore.instance.collection('ad_clicks').doc();
+          batch.set(clickRef, {
+            'adId': ad.id,
+            'userId': userId,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+        }
+        
+        try {
+          await batch.commit();
+        } catch (e) {
+          debugPrint('Failed to record click: $e');
+        }
+
         if (ad.targetUrl != null && ad.targetUrl!.isNotEmpty) {
           try {
             final uri = Uri.parse(ad.targetUrl!);

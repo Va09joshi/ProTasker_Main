@@ -29,6 +29,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   void _signup() async {
     if (_formKey.currentState!.validate()) {
+      if (_passwordController.text != _confirmController.text) {
+        SnackbarHelper.error(context, 'Passwords do not match.');
+        return;
+      }
+      
       if (!_termsAccepted) {
         SnackbarHelper.error(context, 'Please accept the Terms & Conditions');
         return;
@@ -56,7 +61,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     ref.listen(authNotifierProvider, (previous, next) {
       next.whenOrNull(
         error: (error, stack) {
-          SnackbarHelper.error(context, error.toString());
+          final msg = (error.runtimeType.toString() == 'AppException') 
+              ? (error as dynamic).message 
+              : error.toString().replaceAll('Exception: ', '').replaceAll('AppException: ', '');
+          SnackbarHelper.error(context, msg);
         },
       );
     });

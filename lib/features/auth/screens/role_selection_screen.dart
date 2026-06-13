@@ -51,14 +51,14 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               _buildRoleCard(
                 title: 'I need a service',
                 subtitle: 'Find and book professionals for your tasks',
-                icon: Icons.person_search_rounded,
+                imageAsset: 'assets/images/boy.gif',
                 role: UserRole.client,
               ),
               const SizedBox(height: AppDimensions.paddingMD),
               _buildRoleCard(
                 title: 'I provide services',
                 subtitle: 'Offer your skills and earn money',
-                icon: Icons.handyman_rounded,
+                imageAsset: 'assets/images/multitasking.gif',
                 role: UserRole.provider,
               ),
               
@@ -82,7 +82,7 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
   Widget _buildRoleCard({
     required String title,
     required String subtitle,
-    required IconData icon,
+    required String imageAsset,
     required UserRole role,
   }) {
     final isSelected = _selectedRole == role;
@@ -106,16 +106,12 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         ),
         child: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurfaceAlt : const Color(0xFFF3F4F6),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                size: 24,
-                color: isDark ? AppColors.darkTextSecondary : const Color(0xFF4B5563),
+            SizedBox(
+              width: 72,
+              height: 72,
+              child: Image.asset(
+                imageAsset,
+                fit: BoxFit.contain,
               ),
             ),
             const SizedBox(width: AppDimensions.paddingLG),

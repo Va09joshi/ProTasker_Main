@@ -14,6 +14,7 @@ import '../../../core/router/route_names.dart';
 import '../../location/screens/map_picker_screen.dart';
 import '../../../core/services/location_service.dart';
 import '../../booking/screens/proof_upload_bottom_sheet.dart';
+import '../../../core/services/notification_service.dart';
 
 class ProviderDashboardScreen extends ConsumerStatefulWidget {
   const ProviderDashboardScreen({super.key});
@@ -25,7 +26,7 @@ class ProviderDashboardScreen extends ConsumerStatefulWidget {
 class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScreen> {
   bool _hasCheckedLocation = false;
 
-  Future<void> _updateBookingStatus(BuildContext context, String bookingId, BookingStatus status, {String? reason}) async {
+  Future<void> _updateBookingStatus(BuildContext context, BookingModel booking, BookingStatus status, {String? reason}) async {
     try {
       final updates = <String, dynamic>{
         'status': status.name,
@@ -33,7 +34,44 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
       };
       if (reason != null) updates['notes'] = reason;
       
-      await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update(updates);
+      await FirebaseFirestore.instance.collection('bookings').doc(booking.id).update(updates);
+      
+      // Notifications
+      String? notifTitle;
+      String? notifBody;
+      
+      if (status == BookingStatus.accepted) {
+        notifTitle = 'Booking Accepted! 🎉';
+        notifBody = 'Your booking request for ${booking.serviceTitle} has been accepted.';
+      } else if (status == BookingStatus.rejected) {
+        notifTitle = 'Booking Declined';
+        notifBody = 'Your booking request for ${booking.serviceTitle} was declined.';
+      } else if (status == BookingStatus.onTheWay) {
+        notifTitle = 'Provider On The Way 🚗';
+        notifBody = 'The provider is on their way for ${booking.serviceTitle}.';
+      } else if (status == BookingStatus.inProgress) {
+        notifTitle = 'Job Started 🛠️';
+        notifBody = 'The provider has started working on ${booking.serviceTitle}.';
+      }
+
+      if (notifTitle != null && notifBody != null) {
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'userId': booking.clientId,
+          'title': notifTitle,
+          'body': notifBody,
+          'type': 'booking',
+          'read': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'relatedId': booking.id,
+        });
+
+        await NotificationService.sendNotification(
+          targetUid: booking.clientId,
+          title: notifTitle,
+          body: notifBody,
+        );
+      }
+      
       if (context.mounted) SnackbarHelper.info(context, 'Booking ${status.name}');
     } catch (e) {
       if (context.mounted) SnackbarHelper.error(context, 'Error: $e');
@@ -72,7 +110,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                 variant: ButtonVariant.danger,
                 onPressed: () {
                   if (ctrl.text.isNotEmpty) {
-                    _updateBookingStatus(context, booking.id, BookingStatus.rejected, reason: ctrl.text);
+                    _updateBookingStatus(context, booking, BookingStatus.rejected, reason: ctrl.text);
                     Navigator.pop(ctx);
                   }
                 },
@@ -430,7 +468,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
               ),
               confirmDismiss: (direction) async {
                 if (direction == DismissDirection.startToEnd) {
-                  await _updateBookingStatus(context, b.id, BookingStatus.accepted);
+                  await _updateBookingStatus(context, b, BookingStatus.accepted);
                   return true;
                 } else {
                   _showDeclineReasonSheet(context, b);
@@ -454,7 +492,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                     Expanded(
                       child: AppButton(
                         label: 'Accept',
-                        onPressed: () => _updateBookingStatus(context, b.id, BookingStatus.accepted),
+                        onPressed: () => _updateBookingStatus(context, b, BookingStatus.accepted),
                       ),
                     ),
                   ],
@@ -494,7 +532,15 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(booking.serviceTitle, style: AppTextStyles.headingLarge),
+                      Expanded(
+                        child: Text(
+                          booking.serviceTitle, 
+                          style: AppTextStyles.headingLarge,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const SizedBox(width: AppDimensions.paddingSM),
                       StatusBadge(status: booking.status),
                     ],
                   ),
@@ -545,14 +591,14 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                         Expanded(
                           child: AppButton(
                             label: 'On My Way',
-                            onPressed: () => _updateBookingStatus(context, booking.id, BookingStatus.onTheWay),
+                            onPressed: () => _updateBookingStatus(context, booking, BookingStatus.onTheWay),
                           ),
                         )
                       else if (booking.status == BookingStatus.onTheWay)
                         Expanded(
                           child: AppButton(
                             label: 'Start Job',
-                            onPressed: () => _updateBookingStatus(context, booking.id, BookingStatus.inProgress),
+                            onPressed: () => _showOTPDialog(context, booking),
                           ),
                         )
                       else if (booking.status == BookingStatus.inProgress)
@@ -714,7 +760,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                     if (result != null && result is MapPickerResult) {
                       final pm = result.placemark;
                       if (pm.locality != null) {
-                        FirebaseFirestore.instance.collection('users').doc(uid).update({
+                         FirebaseFirestore.instance.collection('users').doc(uid).update({
                           'address.city': pm.locality,
                           'address.lat': result.latitude,
                           'address.lng': result.longitude,
@@ -728,6 +774,239 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
           ),
         ],
       ),
+    );
+  }
+
+  void _showOTPDialog(
+    BuildContext context,
+    BookingModel booking,
+  ) {
+    final displayOtp =
+        booking.otp ?? (booking.id.hashCode.abs() % 9000 + 1000).toString();
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => _OTPVerificationDialog(
+        expectedOtp: displayOtp,
+        onVerified: () => _updateBookingStatus(
+          context,
+          booking,
+          BookingStatus.inProgress,
+        ),
+      ),
+    );
+  }
+}
+
+class _OTPVerificationDialog extends StatefulWidget {
+  final String expectedOtp;
+  final VoidCallback onVerified;
+
+  const _OTPVerificationDialog({
+    required this.expectedOtp,
+    required this.onVerified,
+  });
+
+  @override
+  State<_OTPVerificationDialog> createState() => _OTPVerificationDialogState();
+}
+
+class _OTPVerificationDialogState extends State<_OTPVerificationDialog> {
+  final List<TextEditingController> _controllers = List.generate(
+    4,
+    (_) => TextEditingController(),
+  );
+  final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
+  String _errorMessage = '';
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    for (var controller in _controllers) {
+      controller.dispose();
+    }
+    for (var node in _focusNodes) {
+      node.dispose();
+    }
+    super.dispose();
+  }
+
+  void _verifyOtp() {
+    final enteredOtp = _controllers.map((c) => c.text).join();
+    if (enteredOtp.length < 4) {
+      setState(() {
+        _errorMessage = 'Please enter all 4 digits';
+      });
+      return;
+    }
+
+    if (enteredOtp == widget.expectedOtp) {
+      setState(() {
+        _errorMessage = '';
+        _isLoading = true;
+      });
+      Navigator.pop(context);
+      widget.onVerified();
+    } else {
+      setState(() {
+        _errorMessage = 'Incorrect PIN. Please try again.';
+      });
+      for (var controller in _controllers) {
+        controller.clear();
+      }
+      _focusNodes[0].requestFocus();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return AlertDialog(
+      backgroundColor: isDark ? AppColors.darkSurface : AppColors.surface,
+      surfaceTintColor: Colors.transparent,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        side: BorderSide(
+          color: isDark ? AppColors.darkBorder : AppColors.border,
+          width: 1,
+        ),
+      ),
+      title: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(AppDimensions.paddingSM),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.security_rounded,
+              color: AppColors.primary,
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: AppDimensions.paddingMD),
+          Text(
+            'Enter Start PIN',
+            style: AppTextStyles.headingLarge.copyWith(
+              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'Ask the client for the 4-digit security PIN shown on their booking screen to verify arrival.',
+            textAlign: TextAlign.center,
+            style: AppTextStyles.bodyMedium.copyWith(
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: AppDimensions.paddingXL),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: List.generate(4, (index) {
+              return SizedBox(
+                width: 50,
+                height: 56,
+                child: TextFormField(
+                  controller: _controllers[index],
+                  focusNode: _focusNodes[index],
+                  keyboardType: TextInputType.number,
+                  textAlign: TextAlign.center,
+                  maxLength: 1,
+                  autofocus: index == 0,
+                  style: AppTextStyles.headingLarge.copyWith(
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    contentPadding: EdgeInsets.zero,
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppDimensions.radiusMD,
+                      ),
+                      borderSide: BorderSide(
+                        color: isDark ? AppColors.darkBorder : AppColors.border,
+                        width: 1.5,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppDimensions.radiusMD,
+                      ),
+                      borderSide: const BorderSide(
+                        color: AppColors.primary,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  onChanged: (value) {
+                    if (value.isNotEmpty) {
+                      if (index < 3) {
+                        _focusNodes[index + 1].requestFocus();
+                      } else {
+                        _focusNodes[index].unfocus();
+                        _verifyOtp();
+                      }
+                    } else {
+                      if (index > 0) {
+                        _focusNodes[index - 1].requestFocus();
+                      }
+                    }
+                  },
+                ),
+              );
+            }),
+          ),
+          if (_errorMessage.isNotEmpty) ...[
+            const SizedBox(height: AppDimensions.paddingMD),
+            Text(
+              _errorMessage,
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: AppColors.error,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ],
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(
+        AppDimensions.paddingLG,
+        AppDimensions.paddingSM,
+        AppDimensions.paddingLG,
+        AppDimensions.paddingLG,
+      ),
+      actions: [
+        Row(
+          children: [
+            Expanded(
+              child: AppButton(
+                label: 'Cancel',
+                variant: ButtonVariant.ghost,
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            const SizedBox(width: AppDimensions.paddingMD),
+            Expanded(
+              child: AppButton(
+                label: 'Verify',
+                onPressed: _verifyOtp,
+                isLoading: _isLoading,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

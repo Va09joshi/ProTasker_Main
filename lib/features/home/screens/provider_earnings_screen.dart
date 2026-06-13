@@ -19,17 +19,7 @@ class ProviderEarningsScreen extends ConsumerWidget {
         appBar: AppBar(
           title: const Text('Earnings'),
           backgroundColor: AppColors.primary, foregroundColor: Colors.white,
-          actions: [
-            Padding(
-              padding: const EdgeInsets.only(right: AppDimensions.paddingMD),
-              child: AppButton(
-                label: 'Withdraw',
-                variant: ButtonVariant.ghost,
-                fullWidth: false,
-                onPressed: () => _showWithdrawSheet(context),
-              ),
-            ),
-          ],
+
         ),
         body: SafeArea(
           child: RefreshIndicator(
@@ -76,10 +66,11 @@ class ProviderEarningsScreen extends ConsumerWidget {
   Widget _buildSegmentedControl(WidgetRef ref) {
     final period = ref.watch(earningsPeriodProvider);
     return SegmentedButton<EarningsPeriod>(
+      showSelectedIcon: false,
       segments: const [
-        ButtonSegment(value: EarningsPeriod.thisWeek, label: Text('This Week')),
-        ButtonSegment(value: EarningsPeriod.thisMonth, label: Text('This Month')),
-        ButtonSegment(value: EarningsPeriod.allTime, label: Text('All Time')),
+        ButtonSegment(value: EarningsPeriod.thisWeek, label: Text('This Week', textAlign: TextAlign.center)),
+        ButtonSegment(value: EarningsPeriod.thisMonth, label: Text('This Month', textAlign: TextAlign.center)),
+        ButtonSegment(value: EarningsPeriod.allTime, label: Text('All Time', textAlign: TextAlign.center)),
       ],
       selected: {period},
       onSelectionChanged: (Set<EarningsPeriod> newSelection) {
@@ -330,41 +321,5 @@ class ProviderEarningsScreen extends ConsumerWidget {
     );
   }
 
-  void _showWithdrawSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(AppDimensions.paddingXL),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const BottomSheetHandle(),
-            const SizedBox(height: AppDimensions.paddingMD),
-            Container(
-              padding: const EdgeInsets.all(AppDimensions.paddingLG),
-              decoration: BoxDecoration(
-                color: AppColors.accent.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.account_balance_rounded, size: 48, color: AppColors.accent),
-            ),
-            const SizedBox(height: AppDimensions.paddingLG),
-            const Text('Withdraw Funds', style: AppTextStyles.headingLarge),
-            const SizedBox(height: AppDimensions.paddingMD),
-            Text(
-              'Bank transfer integration is coming soon! You will be able to transfer your net earnings directly to your registered bank account.', 
-              textAlign: TextAlign.center, 
-              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
-            ),
-            const SizedBox(height: AppDimensions.paddingXL),
-            AppButton(
-              label: 'Got it',
-              onPressed: () => Navigator.pop(ctx),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 }

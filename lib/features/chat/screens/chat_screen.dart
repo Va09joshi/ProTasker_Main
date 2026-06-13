@@ -25,12 +25,15 @@ class ChatScreen extends ConsumerStatefulWidget {
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   late TextEditingController _msgCtrl;
+  late ScrollController _scrollCtrl;
   bool _isTyping = false;
 
   @override
   void initState() {
     super.initState();
     _msgCtrl = TextEditingController();
+    _scrollCtrl = ScrollController();
+    _scrollCtrl.addListener(_onScroll);
     
     // Mark as read immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -41,7 +44,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void dispose() {
     _msgCtrl.dispose();
+    _scrollCtrl.removeListener(_onScroll);
+    _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 100) {
+      final limits = ref.read(chatLimitsProvider);
+      final currentLimit = limits[widget.chatId] ?? 50;
+      final messages = ref.read(chatMessagesStreamProvider(widget.chatId)).value;
+      if (messages != null && messages.length >= currentLimit) {
+        ref.read(chatLimitsProvider.notifier).increment(widget.chatId);
+      }
+    }
   }
 
   Future<void> _markAsRead() async {
@@ -344,6 +360,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             child: messagesAsync.when(
                               data: (messages) {
                                 return ListView.builder(
+                                  controller: _scrollCtrl,
                                   physics: const AlwaysScrollableScrollPhysics(),
                                   keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                                   reverse: true,

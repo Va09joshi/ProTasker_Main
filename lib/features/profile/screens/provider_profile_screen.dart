@@ -706,14 +706,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                   ref.read(notificationsEnabledProvider.notifier).toggle(val);
                 },
               ),
-              const Divider(height: 1, indent: 56),
-              SwitchListTile(
-                title: const Text('Dark Mode'),
-                secondary: const Icon(Icons.dark_mode_rounded, color: AppColors.textSecondary),
-                value: isDark,
-                activeColor: AppColors.accent,
-                onChanged: null, // Temporarily disabled
-              ),
+
               const Divider(height: 1, indent: 56),
               ListTile(
                 leading: const Icon(Icons.account_balance_rounded, color: AppColors.textSecondary),

@@ -17,6 +17,7 @@ final clientActiveBookingsStreamProvider = StreamProvider.autoDispose<List<Booki
         BookingStatus.inProgress.name,
       ])
       .orderBy('scheduledAt', descending: true)
+      .limit(20)
       .snapshots()
       .map((snapshot) => snapshot.docs.map((doc) => BookingModel.fromFirestore(doc)).toList());
 });

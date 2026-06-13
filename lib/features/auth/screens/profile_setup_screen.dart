@@ -80,8 +80,17 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         _lat = result.latitude;
         _lng = result.longitude;
         final pm = result.placemark;
-        _streetController.text = '${pm.street ?? ''} ${pm.subLocality ?? ''}'.trim();
-        _cityController.text = pm.locality ?? pm.subAdministrativeArea ?? '';
+        
+        final streetParts = <String>[];
+        if (pm.name != null && pm.name!.isNotEmpty && pm.name != pm.street) streetParts.add(pm.name!);
+        if (pm.street != null && pm.street!.isNotEmpty) streetParts.add(pm.street!);
+        if (pm.subLocality != null && pm.subLocality!.isNotEmpty) streetParts.add(pm.subLocality!);
+        
+        _streetController.text = streetParts.toSet().join(', ');
+        
+        _cityController.text = (pm.locality?.isNotEmpty == true) 
+            ? pm.locality! 
+            : (pm.subAdministrativeArea ?? '');
         _stateController.text = pm.administrativeArea ?? '';
         _pincodeController.text = pm.postalCode ?? '';
       });

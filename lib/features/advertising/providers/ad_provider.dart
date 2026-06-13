@@ -9,6 +9,7 @@ final adProvider = StreamProvider<List<AdModel>>((ref) {
       .collection('ads')
       .where('isActive', isEqualTo: true)
       .orderBy('createdAt', descending: true)
+      .limit(10)
       .snapshots()
       .map((snapshot) {
     return snapshot.docs.map((doc) => AdModel.fromFirestore(doc)).toList();

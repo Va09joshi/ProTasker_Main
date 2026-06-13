@@ -1,0 +1,140 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: check if the user is an admin
+    // This now checks BOTH Firebase Custom Claims AND the 'admins' collection!
+    function isAdmin() {
+      // Strictly use custom claims to prevent massive 2x billing costs at scale,
+      // but also fallback to the 'admins' collection if the custom claim is missing.
+      return request.auth != null && (request.auth.token.admin == true || exists(/databases/$(database)/documents/admins/$(request.auth.uid)));
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create, delete: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      
+      allow update: if request.auth != null && (
+                       request.auth.uid == userId
+                    || isAdmin()
+                    || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rating', 'totalReviews'])
+      );
+    }
+
+    match /services/{serviceId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.providerId || isAdmin());
+    }
+
+    match /bookings/{bookingId} {
+      // Made query-safe
+      allow read: if request.auth != null;
+      
+      allow write: if request.auth != null && (
+                      !exists(/databases/$(database)/documents/bookings/$(bookingId))
+                   || request.auth.uid == resource.data.clientId
+                   || request.auth.uid == resource.data.providerId
+                   || isAdmin()
+      );
+                   
+      allow create: if request.auth != null;
+    }
+
+    match /reviews/{reviewId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && (request.auth.uid == request.resource.data.reviewerId || isAdmin());
+      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.reviewerId || isAdmin());
+    }
+
+    match /chats/{chatId} {
+      // Made query-safe by ensuring auth and specific data matching
+      allow read: if request.auth != null && (
+                     resource == null
+                  || request.auth.uid == resource.data.clientId 
+                  || request.auth.uid == resource.data.providerId 
+                  || isAdmin()
+      );
+
+      allow write: if request.auth != null && (
+                      !exists(/databases/$(database)/documents/chats/$(chatId))
+                   || request.auth.uid == resource.data.clientId
+                   || request.auth.uid == resource.data.providerId
+                   || isAdmin()
+      );
+
+      allow create: if request.auth != null;
+      
+      match /messages/{messageId} {
+        allow read, write: if request.auth != null;
+      }
+
+      match /typing/{userId} {
+        allow read, write: if request.auth != null;
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow read, write: if request.auth != null && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if request.auth != null;
+    }
+
+    match /jobs/{jobId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      
+      allow update, delete: if request.auth != null && (
+                               resource == null
+                            || request.auth.uid == resource.data.clientId
+                            || request.auth.uid == resource.data.providerId
+                            || isAdmin()
+      );
+    }
+
+    // Ads Collection
+    match /ads/{adId} {
+      allow read: if true; 
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']);
+    }
+
+    // Custom Ads Collection (Flutter)
+    match /custom_ads/{adId} {
+      allow read: if true; 
+      allow create, delete: if isAdmin();
+      allow update: if isAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks', 'impressions']);
+    }
+
+    // Ad Clicks Collection
+    match /ad_clicks/{clickId} {
+      allow read: if isAdmin() || request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null;
+      allow update, delete: if isAdmin();
+    }
+
+    // Admins Collection
+    match /admins/{adminId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Providers Collection
+    match /providers/{providerId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == providerId;
+      allow update: if request.auth != null && (request.auth.uid == providerId || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    // Requests Collection (for service request locking workflow)
+    match /requests/{requestId} {
+      allow read, create, update: if request.auth != null;
+      allow delete: if isAdmin();
+    }
+
+    // Settings Collection
+    match /settings/{settingId} {
+      allow read: if true; 
+      allow write: if isAdmin(); 
+    }
+  }
+}

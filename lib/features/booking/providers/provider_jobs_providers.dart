@@ -12,6 +12,7 @@ final providerRequestsStreamProvider = StreamProvider.autoDispose<List<BookingMo
       .where('providerId', isEqualTo: user.uid)
       .where('status', whereIn: [BookingStatus.pending.name, BookingStatus.proposal.name])
       .orderBy('createdAt', descending: true)
+      .limit(20)
       .snapshots()
       .map((snapshot) => snapshot.docs.map((doc) => BookingModel.fromFirestore(doc)).toList());
 });
@@ -25,6 +26,7 @@ final providerUpcomingStreamProvider = StreamProvider.autoDispose<List<BookingMo
       .where('providerId', isEqualTo: user.uid)
       .where('status', isEqualTo: BookingStatus.accepted.name)
       .orderBy('scheduledAt', descending: false)
+      .limit(20)
       .snapshots()
       .map((snapshot) => snapshot.docs.map((doc) => BookingModel.fromFirestore(doc)).toList());
 });
@@ -38,6 +40,7 @@ final providerActiveStreamProvider = StreamProvider.autoDispose<List<BookingMode
       .where('providerId', isEqualTo: user.uid)
       .where('status', whereIn: [BookingStatus.onTheWay.name, BookingStatus.inProgress.name])
       .orderBy('updatedAt', descending: true)
+      .limit(20)
       .snapshots()
       .map((snapshot) => snapshot.docs.map((doc) => BookingModel.fromFirestore(doc)).toList());
 });

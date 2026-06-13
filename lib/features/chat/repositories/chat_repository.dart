@@ -17,37 +17,61 @@ class ChatRepository {
     String bookingId,
   ) async {
     final chatId = '${clientId}_$providerId';
-    final doc = await _db.collection('chats').doc(chatId).get();
+    try {
+      final doc = await _db.collection('chats').doc(chatId).get();
 
-    if (!doc.exists) {
-      final clientDoc = await _db.collection('users').doc(clientId).get();
-      final providerDoc = await _db.collection('users').doc(providerId).get();
+      if (!doc.exists) {
+        final clientDoc = await _db.collection('users').doc(clientId).get();
+        final providerDoc = await _db.collection('users').doc(providerId).get();
 
-      final chat = ChatModel(
-        id: chatId,
-        clientId: clientId,
-        clientName: clientDoc.data()?['name'] ?? 'Client',
-        clientPhoto: clientDoc.data()?['profilePhoto'],
-        providerId: providerId,
-        providerName: providerDoc.data()?['name'] ?? 'Provider',
-        providerPhoto: providerDoc.data()?['profilePhoto'],
-        bookingId: bookingId,
-        lastMessage: 'Chat started',
-        lastMessageTime: DateTime.now(),
-      );
+        final chat = ChatModel(
+          id: chatId,
+          clientId: clientId,
+          clientName: clientDoc.data()?['name'] ?? 'Client',
+          clientPhoto: clientDoc.data()?['profilePhoto'],
+          providerId: providerId,
+          providerName: providerDoc.data()?['name'] ?? 'Provider',
+          providerPhoto: providerDoc.data()?['profilePhoto'],
+          bookingId: bookingId,
+          lastMessage: 'Chat started',
+          lastMessageTime: DateTime.now(),
+        );
 
-      await _db.collection('chats').doc(chatId).set(chat.toMap());
+        await _db.collection('chats').doc(chatId).set(chat.toMap());
+      }
+
+      return chatId;
+    } catch (e) {
+      if (e.toString().contains('permission-denied')) {
+        // Find exactly which one threw
+        try {
+          await _db.collection('chats').doc(chatId).get();
+        } catch (e1) {
+          throw Exception('Permission denied on chats get(): $e1');
+        }
+        try {
+          await _db.collection('users').doc(clientId).get();
+        } catch (e2) {
+          throw Exception('Permission denied on users get(client): $e2');
+        }
+        try {
+          await _db.collection('users').doc(providerId).get();
+        } catch (e3) {
+          throw Exception('Permission denied on users get(provider): $e3');
+        }
+        throw Exception('Permission denied on chats set()');
+      }
+      rethrow;
     }
-
-    return chatId;
   }
 
-  Stream<List<MessageModel>> getMessages(String chatId) {
+  Stream<List<MessageModel>> getMessages(String chatId, {int limit = 50}) {
     return _db
         .collection('chats')
         .doc(chatId)
         .collection('messages')
         .orderBy('timestamp', descending: true)
+        .limit(limit)
         .snapshots()
         .map(
           (snapshot) => snapshot.docs

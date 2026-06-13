@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../shared/models/service_model.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../providers/job_provider.dart';
 
@@ -19,18 +20,11 @@ class _PostJobScreenState extends ConsumerState<PostJobScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _descController = TextEditingController();
-  String _selectedCategory = 'Home Repair';
   final List<File> _images = [];
   final _imagePicker = ImagePicker();
+  ServiceCategory _selectedCategory = ServiceCategory.other;
 
-  final List<String> _categories = [
-    'Home Repair',
-    'Cleaning',
-    'Plumbing',
-    'Electrical',
-    'Moving',
-    'Other'
-  ];
+  final List<ServiceCategory> _categories = ServiceCategory.values;
 
   @override
   void dispose() {
@@ -68,12 +62,12 @@ class _PostJobScreenState extends ConsumerState<PostJobScreen> {
       final success = await ref.read(jobProvider.notifier).postJob(
             _titleController.text.trim(),
             _descController.text.trim(),
-            _selectedCategory,
+            _selectedCategory.name,
             images: _images,
           );
 
       if (success && mounted) {
-        SnackbarHelper.success(context, 'Problem posted successfully!');
+        SnackbarHelper.success(context, 'Work posted successfully!');
         Navigator.pop(context); // Go back after posting
       }
     }
@@ -93,7 +87,7 @@ class _PostJobScreenState extends ConsumerState<PostJobScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Post a Problem'),
+        title: const Text('Post Work'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppDimensions.paddingLG),
@@ -112,21 +106,21 @@ class _PostJobScreenState extends ConsumerState<PostJobScreen> {
 
               AppTextField(
                 controller: _titleController,
-                label: 'Problem Title',
+                label: 'Work Title',
                 hint: 'e.g., Leaking kitchen sink',
                 validator: (val) => val == null || val.isEmpty ? 'Required' : null,
                 enabled: !isLoading,
               ),
               const SizedBox(height: AppDimensions.paddingLG),
 
-              DropdownButtonFormField<String>(
+              DropdownButtonFormField<ServiceCategory>(
                 value: _selectedCategory,
                 decoration: InputDecoration(
                   labelText: 'Category',
                   filled: true,
                   fillColor: isDark ? AppColors.darkBackground : AppColors.background,
                 ),
-                items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                items: _categories.map((c) => DropdownMenuItem(value: c, child: Text(c.displayName))).toList(),
                 onChanged: isLoading ? null : (val) => setState(() => _selectedCategory = val!),
               ),
               const SizedBox(height: AppDimensions.paddingLG),
@@ -262,7 +256,7 @@ class _PostJobScreenState extends ConsumerState<PostJobScreen> {
               const SizedBox(height: AppDimensions.paddingXL),
 
               AppButton(
-                label: 'Post Problem',
+                label: 'Post Work',
                 isLoading: isLoading,
                 onPressed: _submit,
               ),

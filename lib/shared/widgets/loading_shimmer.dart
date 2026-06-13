@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../core/theme/theme.dart';
 
-enum ShimmerType { card, list, profile, dashboard }
+enum ShimmerType { card, list, profile, dashboard, map }
 
 class LoadingShimmer extends StatelessWidget {
   final ShimmerType type;
@@ -73,6 +73,8 @@ class LoadingShimmer extends StatelessWidget {
         return Column(
           children: List.generate(4, (_) => _listItem()),
         );
+      case ShimmerType.map:
+        return _rect(double.infinity, double.infinity);
     }
   }
 

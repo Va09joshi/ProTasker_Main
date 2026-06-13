@@ -51,20 +51,20 @@ class _SplashScreenState extends ConsumerState<SplashScreen> with SingleTickerPr
       final prefs = await SharedPreferences.getInstance();
       final seenOnboarding = prefs.getBool('onboarding_seen') ?? false;
       if (seenOnboarding) {
-        context.go(RoutePaths.login);
+        context.replace(RoutePaths.login);
       } else {
-        context.go(RoutePaths.onboarding);
+        context.replace(RoutePaths.onboarding);
       }
     } else {
       final userModelAsync = ref.read(currentUserProvider);
       final userModel = userModelAsync.value;
 
       if (userModel == null || !userModel.profileComplete) {
-        context.go(RoutePaths.profileSetup);
+        context.replace(RoutePaths.profileSetup);
       } else if (userModel.role == UserRole.client) {
-        context.go(RoutePaths.clientHome);
+        context.replace(RoutePaths.clientHome);
       } else {
-        context.go(RoutePaths.providerDashboard);
+        context.replace(RoutePaths.providerDashboard);
       }
     }
   }

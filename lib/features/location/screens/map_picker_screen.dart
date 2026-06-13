@@ -203,16 +203,53 @@ class _MapPickerScreenState extends State<MapPickerScreen> {
           ? const Center(child: CircularProgressIndicator())
           : Stack(
               children: [
-                GoogleMap(
-                  initialCameraPosition: _initialPosition!,
-                  onMapCreated: (GoogleMapController controller) {
-                    _controller.complete(controller);
-                  },
-                  onCameraMove: _onCameraMove,
-                  onCameraIdle: _onCameraIdle,
-                  myLocationEnabled: true,
-                  myLocationButtonEnabled: false,
-                  zoomControlsEnabled: false,
+                ClipRect(
+                  child: Transform.scale(
+                    scale: 1.15,
+                    child: GoogleMap(
+                      initialCameraPosition: _initialPosition!,
+                      onMapCreated: (GoogleMapController controller) {
+                        _controller.complete(controller);
+                        controller.setMapStyle('''
+[
+  {
+    "featureType": "poi",
+    "stylers": [
+      { "visibility": "off" }
+    ]
+  },
+  {
+    "featureType": "transit",
+    "stylers": [
+      { "visibility": "off" }
+    ]
+  },
+  {
+    "featureType": "landscape",
+    "elementType": "geometry.fill",
+    "stylers": [
+      { "color": "#f4f4f4" }
+    ]
+  },
+  {
+    "featureType": "landscape.natural",
+    "stylers": [
+      { "visibility": "off" }
+    ]
+  }
+]
+''');
+                      },
+                      onCameraMove: _onCameraMove,
+                      onCameraIdle: _onCameraIdle,
+                      myLocationEnabled: true,
+                      myLocationButtonEnabled: false,
+                      zoomControlsEnabled: false,
+                      mapToolbarEnabled: false,
+                      compassEnabled: false,
+                      buildingsEnabled: false,
+                    ),
+                  ),
                 ),
                 // Center Pin
                 Center(

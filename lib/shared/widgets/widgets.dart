@@ -13,3 +13,4 @@ export 'error_view.dart';
 export 'loading_shimmer.dart';
 export 'bottom_sheet_handle.dart';
 export 'confirm_dialog.dart';
+export 'animated_search_placeholder.dart';

@@ -157,35 +157,40 @@ class PublicProviderProfileScreen extends ConsumerWidget {
 
                 // Bio
                 if (provider.bio != null && provider.bio!.isNotEmpty) ...[
-                  const Text('About', style: AppTextStyles.headingLarge),
-                  const SizedBox(height: AppDimensions.paddingMD),
+                  _SectionHeading(title: 'About'),
                   Text(provider.bio!, style: AppTextStyles.bodyMedium),
                   const SizedBox(height: AppDimensions.paddingXL),
                 ],
 
                 // Offered Services
                 if (provider.offeredServices != null && provider.offeredServices!.isNotEmpty) ...[
-                  const Text('Services Offered', style: AppTextStyles.headingLarge),
-                  const SizedBox(height: AppDimensions.paddingMD),
+                  _SectionHeading(title: 'Services Offered'),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: provider.offeredServices!.map((service) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
-                      ),
-                      child: Text(service, style: AppTextStyles.labelSmall.copyWith(color: AppColors.accent)),
-                    )).toList(),
+                    children: provider.offeredServices!.map((service) {
+                      String displayName = service;
+                      try {
+                        final cat = ServiceCategory.values.byName(service.toLowerCase());
+                        displayName = cat.displayName;
+                      } catch (_) {}
+                      
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                        ),
+                        child: Text(displayName, style: AppTextStyles.labelSmall.copyWith(color: AppColors.accent)),
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: AppDimensions.paddingXL),
                 ],
 
                 // Portfolio
                 if (provider.portfolioImages != null && provider.portfolioImages!.isNotEmpty) ...[
-                  const Text('Portfolio', style: AppTextStyles.headingLarge),
-                  const SizedBox(height: AppDimensions.paddingMD),
+                  _SectionHeading(title: 'Portfolio'),
                   SizedBox(
                     height: 140,
                     child: ListView.builder(
@@ -291,6 +296,32 @@ class PublicProviderProfileScreen extends ConsumerWidget {
         loading: () => const LoadingShimmer(type: ShimmerType.profile),
         error: (err, st) => ErrorView(message: err.toString(), onRetry: () => ref.refresh(publicProviderProfileProvider(providerId))),
       ),
+    );
+  }
+}
+
+class _SectionHeading extends StatelessWidget {
+  final String title;
+
+  const _SectionHeading({required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: AppTextStyles.headingLarge),
+        const SizedBox(height: 6),
+        Container(
+          width: 48,
+          height: 3,
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(height: AppDimensions.paddingMD),
+      ],
     );
   }
 }

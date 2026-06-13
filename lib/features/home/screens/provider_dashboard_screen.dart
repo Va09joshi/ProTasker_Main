@@ -259,7 +259,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                   child: _buildStatCard(
                     'Today',
                     '₹${stats.todayEarnings.toStringAsFixed(0)}',
-                    Icons.payments_rounded,
+                    'assets/images/money-bag.png',
                     AppColors.success,
                   ),
                 ),
@@ -268,7 +268,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                   child: _buildStatCard(
                     'Jobs',
                     '${stats.weekJobs}',
-                    Icons.work_rounded,
+                    'assets/images/business-bag.png',
                     AppColors.accent,
                   ),
                 ),
@@ -281,7 +281,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                   child: _buildStatCard(
                     'Rating',
                     stats.avgRating.toStringAsFixed(1),
-                    Icons.star_rounded,
+                    'assets/images/star-rating.png',
                     AppColors.warning,
                   ),
                 ),
@@ -290,7 +290,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                   child: _buildStatCard(
                     'Completion',
                     '${stats.completionRate.toStringAsFixed(0)}%',
-                    Icons.check_circle_rounded,
+                    'assets/images/checked.png',
                     AppColors.primary,
                   ),
                 ),
@@ -304,7 +304,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
     );
   }
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color iconColor) {
+  Widget _buildStatCard(String label, String value, String imagePath, Color iconColor) {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingLG),
       decoration: BoxDecoration(
@@ -321,7 +321,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
               color: iconColor.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Image.asset(imagePath, width: 28, height: 28),
           ),
           const SizedBox(height: AppDimensions.paddingLG),
           Text(value, style: AppTextStyles.displayMedium),
@@ -359,12 +359,17 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
               ),
             ),
             Container(
-              padding: const EdgeInsets.all(AppDimensions.paddingSM),
+              width: 48,
+              height: 48,
               decoration: const BoxDecoration(
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.list_alt_rounded, color: AppColors.primary),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                'assets/images/map_near.png',
+                fit: BoxFit.cover,
+              ),
             ),
           ],
         ),

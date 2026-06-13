@@ -22,17 +22,15 @@ class BookingCard extends StatelessWidget {
     switch (status) {
       case BookingStatus.pending:
       case BookingStatus.proposal:
-        return AppColors.statusPending;
       case BookingStatus.accepted:
       case BookingStatus.onTheWay:
-        return AppColors.statusAccepted;
       case BookingStatus.inProgress:
-        return AppColors.statusActive;
+        return AppColors.accent;
       case BookingStatus.completed:
-        return AppColors.statusCompleted;
+        return AppColors.success;
       case BookingStatus.rejected:
       case BookingStatus.cancelled:
-        return AppColors.statusCancelled;
+        return AppColors.error;
     }
   }
 
@@ -116,7 +114,7 @@ class BookingCard extends StatelessWidget {
                               ),
                             ),
                           Text(
-                            booking.serviceCategory.name.toUpperCase(),
+                            booking.serviceCategory.displayName.toUpperCase(),
                             style: AppTextStyles.caption.copyWith(
                               color: AppColors.accent,
                               fontWeight: FontWeight.w600,

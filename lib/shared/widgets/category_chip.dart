@@ -30,7 +30,7 @@ class CategoryChip extends StatelessWidget {
           ),
         ),
         child: Text(
-          category.name[0].toUpperCase() + category.name.substring(1),
+          category.displayName,
           style: AppTextStyles.labelSmall.copyWith(
             color: isSelected ? Colors.white : AppColors.textSecondary,
           ),

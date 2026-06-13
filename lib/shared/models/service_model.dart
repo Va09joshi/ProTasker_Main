@@ -10,7 +10,30 @@ enum ServiceCategory {
   carpentry,
   appliance,
   shifting,
+  gardening,
+  salon,
+  hardware,
+  mechanic,
   other,
+}
+
+extension ServiceCategoryExtension on ServiceCategory {
+  String get displayName {
+    switch (this) {
+      case ServiceCategory.cleaning: return 'Cleaning';
+      case ServiceCategory.plumbing: return 'Plumbing';
+      case ServiceCategory.electrical: return 'Electrical';
+      case ServiceCategory.painting: return 'Painting';
+      case ServiceCategory.carpentry: return 'Carpentry';
+      case ServiceCategory.appliance: return 'Appliance Repair';
+      case ServiceCategory.shifting: return 'Moving';
+      case ServiceCategory.gardening: return 'Gardening';
+      case ServiceCategory.salon: return 'Salon';
+      case ServiceCategory.hardware: return 'Hardware';
+      case ServiceCategory.mechanic: return 'Mechanic';
+      case ServiceCategory.other: return 'Other';
+    }
+  }
 }
 
 class ServiceModel {

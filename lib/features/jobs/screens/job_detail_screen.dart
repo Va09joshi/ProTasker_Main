@@ -242,7 +242,7 @@ class JobDetailScreen extends ConsumerWidget {
                         children: [
                           Icon(Icons.description_outlined, color: isDark ? Colors.white70 : AppColors.primary, size: 24),
                           const SizedBox(width: 10),
-                          const Text('Problem Description', style: AppTextStyles.headingMedium),
+                          const Text('Work Description', style: AppTextStyles.headingMedium),
                         ],
                       ),
                       const SizedBox(height: AppDimensions.paddingMD),

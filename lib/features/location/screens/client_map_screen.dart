@@ -9,8 +9,10 @@ import 'package:go_router/go_router.dart';
 import 'package:geocoding/geocoding.dart';
 import '../../../core/theme/theme.dart';
 import '../../../shared/models/user_model.dart';
+import '../../../shared/models/service_model.dart';
 import '../../../shared/widgets/app_avatar.dart';
 import '../../../shared/widgets/app_button.dart';
+import '../../../shared/widgets/loading_shimmer.dart';
 import '../../home/providers/home_providers.dart';
 import '../../../shared/providers/user_session_provider.dart';
 
@@ -128,18 +130,11 @@ class ClientMapScreen extends ConsumerStatefulWidget {
 class _ClientMapScreenState extends ConsumerState<ClientMapScreen> {
   GoogleMapController? _mapController;
   String _searchQuery = '';
-  String _selectedCategory = 'All';
+  ServiceCategory? _selectedCategory;
   
-  final List<String> _categories = [
-    'All',
-    'Cleaning',
-    'Plumbing',
-    'Electrical',
-    'Painting',
-    'Carpentry',
-    'Appliance',
-    'Moving'
-  ];
+  List<ServiceCategory?> get _categories {
+    return [null, ...ServiceCategory.values];
+  }
 
   final List<String> _citySuggestions = [
     'Mumbai', 'Delhi', 'Bangalore', 'Hyderabad', 'Ahmedabad', 'Chennai', 
@@ -183,6 +178,19 @@ class _ClientMapScreenState extends ConsumerState<ClientMapScreen> {
   },
   {
     "featureType": "transit",
+    "stylers": [
+      { "visibility": "off" }
+    ]
+  },
+  {
+    "featureType": "landscape",
+    "elementType": "geometry.fill",
+    "stylers": [
+      { "color": "#f4f4f4" }
+    ]
+  },
+  {
+    "featureType": "landscape.natural",
     "stylers": [
       { "visibility": "off" }
     ]
@@ -474,6 +482,7 @@ class _ClientMapScreenState extends ConsumerState<ClientMapScreen> {
                   child: Row(
                     children: _categories.map((category) {
                       final isSelected = _selectedCategory == category;
+                      final label = category == null ? 'All' : category.displayName;
                       return GestureDetector(
                         onTap: () {
                           setState(() {
@@ -492,7 +501,7 @@ class _ClientMapScreenState extends ConsumerState<ClientMapScreen> {
                             ),
                           ),
                           child: Text(
-                            category,
+                            label,
                             style: AppTextStyles.labelLarge.copyWith(
                               color: isSelected ? AppColors.surface : Colors.white.withValues(alpha: 0.6),
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
@@ -516,8 +525,8 @@ class _ClientMapScreenState extends ConsumerState<ClientMapScreen> {
                   // Only show online providers on the map
                   if (!p.isOnline) return false;
 
-                  final matchesCategory = _selectedCategory == 'All' ||
-                      (p.offeredServices?.any((s) => s.toLowerCase().contains(_selectedCategory.toLowerCase())) ?? false);
+                  final matchesCategory = _selectedCategory == null ||
+                      (p.offeredServices?.any((s) => s.toLowerCase() == _selectedCategory!.name.toLowerCase()) ?? false);
                   
                   final matchesSearch = _searchQuery.isEmpty ||
                       p.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -552,7 +561,7 @@ class _ClientMapScreenState extends ConsumerState<ClientMapScreen> {
                     // Scale map slightly to push the Google logo off-screen
                     ClipRect(
                       child: Transform.scale(
-                        scale: 1.05,
+                        scale: 1.15,
                         child: GoogleMap(
                           initialCameraPosition: CameraPosition(
                             target: initialTarget,
@@ -564,6 +573,8 @@ class _ClientMapScreenState extends ConsumerState<ClientMapScreen> {
                           myLocationButtonEnabled: true,
                           zoomControlsEnabled: false,
                           mapToolbarEnabled: false,
+                          compassEnabled: false,
+                          buildingsEnabled: false,
                         ),
                       ),
                     ),
@@ -602,7 +613,7 @@ class _ClientMapScreenState extends ConsumerState<ClientMapScreen> {
                   ],
                 );
               },
-              loading: () => const Center(child: CircularProgressIndicator()),
+              loading: () => const Center(child: LoadingShimmer(type: ShimmerType.map)),
               error: (e, _) => Center(child: Text('Failed to load map: $e')),
             ),
           ),

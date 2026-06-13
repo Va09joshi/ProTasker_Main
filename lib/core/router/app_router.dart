@@ -54,10 +54,34 @@ CustomTransitionPage _buildPageWithFadeTransition<T>(
   return CustomTransitionPage<T>(
     key: state.pageKey,
     child: child,
-    transitionDuration: const Duration(milliseconds: 150),
+    transitionDuration: const Duration(milliseconds: 250),
     transitionsBuilder: (context, animation, secondaryAnimation, child) {
       return FadeTransition(
-        opacity: CurveTween(curve: Curves.easeInOut).animate(animation),
+        opacity: CurveTween(curve: Curves.easeIn).animate(animation),
+        child: child,
+      );
+    },
+  );
+}
+
+CustomTransitionPage _buildPageWithSlideTransition<T>(
+  BuildContext context,
+  GoRouterState state,
+  Widget child,
+) {
+  return CustomTransitionPage<T>(
+    key: state.pageKey,
+    child: child,
+    transitionDuration: const Duration(milliseconds: 250),
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return SlideTransition(
+        position: Tween<Offset>(
+          begin: const Offset(1.0, 0.0),
+          end: Offset.zero,
+        ).animate(CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        )),
         child: child,
       );
     },
@@ -186,7 +210,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: '/client/post-job',
             name: RouteNames.postJob,
-            builder: (context, state) => const PostJobScreen(),
+            pageBuilder: (context, state) => _buildPageWithSlideTransition(context, state, const PostJobScreen()),
           ),
           GoRoute(
             path: '/client/category-providers/:category',
@@ -302,22 +326,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/chat/:id',
         name: 'chatScreen',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
-          return ChatScreen(chatId: id);
+          return _buildPageWithSlideTransition(context, state, ChatScreen(chatId: id));
         },
       ),
       GoRoute(
         path: '/my-jobs',
         name: 'myJobs',
-        builder: (context, state) => const ClientJobsScreen(),
+        pageBuilder: (context, state) => _buildPageWithSlideTransition(context, state, const ClientJobsScreen()),
       ),
       GoRoute(
         path: '/job/:id',
         name: 'jobDetail',
-        builder: (context, state) {
+        pageBuilder: (context, state) {
           final id = state.pathParameters['id']!;
-          return JobDetailScreen(jobId: id);
+          return _buildPageWithSlideTransition(context, state, JobDetailScreen(jobId: id));
         },
       ),
       GoRoute(

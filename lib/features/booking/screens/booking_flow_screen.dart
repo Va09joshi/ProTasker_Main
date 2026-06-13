@@ -124,7 +124,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
 
       final priorityFee = state.isEmergency ? 299.0 : 0.0;
       final grossPrice = service.basePrice + priorityFee;
-      final platformFee = grossPrice * 0.10;
+      final platformFee = 0.0; // Neglected platform fee
       final netPrice = grossPrice - platformFee;
 
       final fullNotes = [
@@ -660,7 +660,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
           const SizedBox(height: AppDimensions.paddingXL),
           AppTextField(
             controller: _notesCtrl,
-            label: 'Describe the Problem',
+            label: 'Describe the Work',
             hint: 'Provide details about the issue...',
             maxLines: 4,
           ),
@@ -764,7 +764,7 @@ class _BookingFlowScreenState extends ConsumerState<BookingFlowScreen> {
     final state = ref.watch(bookingFlowProvider);
     final priorityFee = state.isEmergency ? 299.0 : 0.0;
     final gross = service.basePrice + priorityFee;
-    final fee = gross * 0.10;
+    final fee = 0.0; // Neglected platform fee
     final total = gross + fee;
 
     return SingleChildScrollView(

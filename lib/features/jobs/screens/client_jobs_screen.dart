@@ -21,29 +21,33 @@ class ClientJobsScreen extends ConsumerWidget {
         backgroundColor: AppColors.primary, foregroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => context.pop(),
         ),
       ),
       body: SafeArea(
-        child: myPostsAsync.when(
-          data: (posts) {
-            if (posts.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(AppDimensions.paddingLG),
-                  child: EmptyState(
-                    title: 'No Posts Found',
-                    subtitle: 'You haven\'t posted any jobs yet.',
-                  ),
-                ),
-              );
-            }
-            return RefreshIndicator(
-              onRefresh: () async => ref.refresh(myJobPostsProvider),
-              color: AppColors.accent,
-              backgroundColor: AppColors.surface,
-              child: ListView.separated(
+        child: RefreshIndicator(
+          onRefresh: () async => ref.refresh(myJobPostsProvider),
+          color: AppColors.accent,
+          backgroundColor: AppColors.surface,
+          child: myPostsAsync.when(
+            data: (posts) {
+              if (posts.isEmpty) {
+                return ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+                    const Padding(
+                      padding: EdgeInsets.all(AppDimensions.paddingLG),
+                      child: EmptyState(
+                        title: 'No Posts Found',
+                        subtitle: 'You haven\'t posted any jobs yet.',
+                      ),
+                    ),
+                  ],
+                );
+              }
+              return ListView.separated(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(AppDimensions.paddingLG),
                 itemCount: posts.length,
@@ -52,12 +56,14 @@ class ClientJobsScreen extends ConsumerWidget {
                   final post = posts[index];
                   return Card(
                     elevation: 0,
+                    color: Colors.white,
+                    margin: EdgeInsets.zero,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-                      side: BorderSide(color: AppColors.border, width: 1),
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: Colors.grey.shade200, width: 1),
                     ),
                     child: Padding(
-                      padding: const EdgeInsets.all(AppDimensions.paddingLG),
+                      padding: const EdgeInsets.all(16.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -66,68 +72,104 @@ class ClientJobsScreen extends ConsumerWidget {
                             children: [
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: AppDimensions.paddingSM,
-                                  vertical: 4,
+                                  horizontal: 12,
+                                  vertical: 6,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                                  color: const Color(0xFFF3F4F6),
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Text(
                                   post.category,
-                                  style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
+                                  style: const TextStyle(
+                                    color: Color(0xFF374151),
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
                               Text(
-                                DateFormat.yMMMd().format(post.createdAt),
-                                style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+                                DateFormat('MMM d, yyyy').format(post.createdAt),
+                                style: const TextStyle(
+                                  color: Color(0xFF9CA3AF),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: AppDimensions.paddingSM),
+                          const SizedBox(height: 12),
                           Text(
                             post.title,
-                            style: AppTextStyles.headingMedium.copyWith(
-                              color: AppColors.textPrimary,
+                            style: const TextStyle(
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
+                              color: Colors.black87,
+                              height: 1.3,
                             ),
                           ),
-                          const SizedBox(height: AppDimensions.paddingSM),
+                          const SizedBox(height: 8),
                           Text(
                             post.description,
-                            style: AppTextStyles.bodyMedium.copyWith(
-                              color: AppColors.textSecondary,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Color(0xFF6B7280),
+                              height: 1.4,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: AppDimensions.paddingMD),
-                          const Divider(),
-                          const SizedBox(height: AppDimensions.paddingSM),
+                          const SizedBox(height: 16),
+                          Divider(color: Colors.grey.shade100, height: 1, thickness: 1),
+                          const SizedBox(height: 16),
                           Row(
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: post.status == 'open' ? AppColors.success.withValues(alpha: 0.1) : AppColors.warning.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
+                                  color: post.status == 'open' 
+                                      ? const Color(0xFFD1FAE5) 
+                                      : post.status == 'inProgress' 
+                                          ? const Color(0xFFFEF3C7) 
+                                          : Colors.grey.shade100,
+                                  borderRadius: BorderRadius.circular(16),
                                 ),
                                 child: Text(
-                                  post.status.toUpperCase(),
-                                  style: AppTextStyles.labelSmall.copyWith(
-                                    color: post.status == 'open' ? AppColors.success : AppColors.warning,
+                                  post.status == 'inProgress' ? 'IN_PROGRESS' : post.status.toUpperCase(),
+                                  style: TextStyle(
+                                    color: post.status == 'open' 
+                                        ? const Color(0xFF059669) 
+                                        : post.status == 'inProgress' 
+                                            ? const Color(0xFFD97706) 
+                                            : Colors.grey.shade600,
                                     fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
                               ),
                               const Spacer(),
-                              AppButton(
-                                label: 'Details',
-                                variant: ButtonVariant.secondary,
-                                fullWidth: false,
+                              OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.black87,
+                                  side: BorderSide(color: Colors.grey.shade300, width: 1),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                                  minimumSize: const Size(0, 0),
+                                  elevation: 0,
+                                ),
                                 onPressed: () {
                                   context.push('/job/${post.id}');
                                 },
+                                child: const Text(
+                                  'Details',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 14,
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -136,15 +178,20 @@ class ClientJobsScreen extends ConsumerWidget {
                     ),
                   );
                 },
-              ),
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (err, _) => Padding(
-            padding: const EdgeInsets.all(AppDimensions.paddingLG),
-            child: ErrorView(
-              message: 'Failed to load your posts',
-              onRetry: () => ref.refresh(myJobPostsProvider),
+              );
+            },
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (err, _) => ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(AppDimensions.paddingLG),
+                  child: ErrorView(
+                    message: 'Failed to load your posts',
+                    onRetry: () => ref.refresh(myJobPostsProvider),
+                  ),
+                ),
+              ],
             ),
           ),
         ),

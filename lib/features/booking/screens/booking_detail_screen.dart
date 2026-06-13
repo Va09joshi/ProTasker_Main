@@ -217,7 +217,7 @@ class BookingDetailScreen extends ConsumerWidget {
                       const SizedBox(height: AppDimensions.paddingMD),
 
                       if (booking.notes != null && booking.notes!.isNotEmpty) ...[
-                        _buildProblemDescriptionCard(booking),
+                        _buildWorkDescriptionCard(booking),
                         const SizedBox(height: AppDimensions.paddingMD),
                       ],
 
@@ -562,7 +562,7 @@ class BookingDetailScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildProblemDescriptionCard(BookingModel booking) {
+  Widget _buildWorkDescriptionCard(BookingModel booking) {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingLG),
       decoration: BoxDecoration(
@@ -583,7 +583,7 @@ class BookingDetailScreen extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text('Problem Description / Notes', style: AppTextStyles.headingLarge),
+          const Text('Work Description / Notes', style: AppTextStyles.headingLarge),
           const SizedBox(height: AppDimensions.paddingMD),
           Text(
             booking.notes!,

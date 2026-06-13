@@ -96,8 +96,8 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
         status: BookingStatus.pending, // Pending Provider Approval
         address: client.address, // Default to client's address
         grossPrice: price,
-        platformFee: price * 0.1,
-        netPrice: price * 0.9,
+        platformFee: 0.0, // Neglected platform fee
+        netPrice: price,
         notes: _notesController.text,
         proofImages: [],
         createdAt: DateTime.now(),
@@ -390,11 +390,11 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
 
                       AppTextField(
                         controller: _notesController,
-                        label: 'Describe the problem',
+                        label: 'Describe the work',
                         hint: 'Provide details about the issue...',
                         maxLines: 4,
                         validator: (val) {
-                          if (val == null || val.trim().isEmpty) return 'Please describe the problem';
+                          if (val == null || val.trim().isEmpty) return 'Please describe the work';
                           if (val.trim().length < 10) return 'Description must be at least 10 characters';
                           return null;
                         },

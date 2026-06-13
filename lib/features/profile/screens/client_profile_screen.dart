@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../../core/services/cloudinary_service.dart';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:go_router/go_router.dart';
@@ -86,8 +87,6 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
                     _buildHeader(context, user),
                     const SizedBox(height: AppDimensions.paddingLG),
                     _buildStatsRow(),
-                    const SizedBox(height: AppDimensions.paddingLG),
-                    _buildMyPosts(context),
                     const SizedBox(height: AppDimensions.paddingLG),
                     _buildSettingsList(context, user),
                     const SizedBox(height: AppDimensions.paddingXL),
@@ -196,159 +195,25 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
     );
   }
 
-  Widget _buildMyPosts(BuildContext context) {
-    final myPostsAsync = ref.watch(myJobPostsProvider);
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('My Job Posts', style: AppTextStyles.headingMedium),
-              GestureDetector(
-                onTap: () => context.push('/my-jobs'),
-                child: Text('View All', style: AppTextStyles.labelLarge.copyWith(color: AppColors.accent)),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppDimensions.paddingSM),
-        myPostsAsync.when(
-          data: (posts) {
-            if (posts.isEmpty) {
-              return const Padding(
-                padding: EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG),
-                child: EmptyState(
-                  title: 'No Posts Yet',
-                  subtitle: 'You haven\'t posted any jobs. Need help? Post a problem!',
-                ),
-              );
-            }
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG),
-              itemCount: posts.length > 3 ? 3 : posts.length, // Show up to 3 recent posts
-              separatorBuilder: (context, index) => const SizedBox(height: AppDimensions.paddingMD),
-              itemBuilder: (context, index) {
-                final post = posts[index];
-                return Card(
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-                    side: BorderSide(color: AppColors.border, width: 1),
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(AppDimensions.paddingLG),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: AppDimensions.paddingSM,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
-                              ),
-                              child: Text(
-                                post.category,
-                                style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
-                              ),
-                            ),
-                            Text(
-                              DateFormat.yMMMd().format(post.createdAt),
-                              style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppDimensions.paddingSM),
-                        Text(
-                          post.title,
-                          style: AppTextStyles.headingMedium.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        if (post.budget != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            'Budget: ₹${post.budget!.toStringAsFixed(0)}',
-                            style: AppTextStyles.bodyMedium.copyWith(color: AppColors.success, fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                        const SizedBox(height: AppDimensions.paddingSM),
-                        Text(
-                          post.description,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        const SizedBox(height: AppDimensions.paddingMD),
-                        const Divider(),
-                        const SizedBox(height: AppDimensions.paddingSM),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                              decoration: BoxDecoration(
-                                color: post.status == 'open' ? AppColors.success.withValues(alpha: 0.1) : AppColors.warning.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(AppDimensions.radiusPill),
-                              ),
-                              child: Text(
-                                post.status.toUpperCase(),
-                                style: AppTextStyles.labelSmall.copyWith(
-                                  color: post.status == 'open' ? AppColors.success : AppColors.warning,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            const Spacer(),
-                            AppButton(
-                              label: 'Details',
-                              variant: ButtonVariant.secondary,
-                              fullWidth: false,
-                              onPressed: () {
-                                context.push('/job/${post.id}');
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            );
-          },
-          loading: () => const Padding(
-            padding: EdgeInsets.all(AppDimensions.paddingLG),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-          error: (err, _) => Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG),
-            child: ErrorView(
-              message: 'Failed to load posts',
-              onRetry: () => ref.refresh(myJobPostsProvider),
-            ),
-          ),
-        ),
-      ],
-    );
+
+
+  Future<void> _rateApp() async {
+    // In a real app, use in_app_review package. 
+    // For now, we simulate success or fallback to url.
+    try {
+      final url = Uri.parse('https://play.google.com/store/apps/details?id=com.kkinfotech.protasker');
+      if (await canLaunchUrl(url)) {
+        await launchUrl(url, mode: LaunchMode.externalApplication);
+      } else {
+        if (mounted) SnackbarHelper.success(context, 'Thank you for rating Protasker!');
+      }
+    } catch (e) {
+      if (mounted) SnackbarHelper.error(context, 'Could not open store. Please try again later.');
+    }
   }
 
   Widget _buildSettingsList(BuildContext context, UserModel user) {
     final notifs = ref.watch(notificationsEnabledProvider);
-    final isDark = ref.watch(isDarkModeProvider);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -405,19 +270,18 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
                 },
               ),
               const Divider(height: 1, indent: 56),
+              ListTile(
+                leading: const Icon(Icons.work_outline_rounded, color: AppColors.textSecondary),
+                title: const Text('My Job Posts'),
+                trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+                onTap: () => context.push('/my-jobs'),
+              ),
+              const Divider(height: 1, indent: 56),
               SwitchListTile(
                 secondary: const Icon(Icons.notifications_rounded, color: AppColors.textSecondary),
                 title: const Text('Push Notifications'),
                 value: notifs,
                 onChanged: _toggleNotifications,
-                activeColor: AppColors.accent,
-              ),
-              const Divider(height: 1, indent: 56),
-              SwitchListTile(
-                secondary: const Icon(Icons.dark_mode_rounded, color: AppColors.textSecondary),
-                title: const Text('Dark Mode'),
-                value: isDark,
-                onChanged: null, // Temporarily disabled
                 activeColor: AppColors.accent,
                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(bottom: Radius.circular(AppDimensions.radiusLG))),
               ),
@@ -447,18 +311,18 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
               ),
               const Divider(height: 1, indent: 56, color: AppColors.border),
               ListTile(
-                leading: const Icon(Icons.star, color: AppColors.textSecondary),
-                title: Text('Rate the App', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
-                trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary, size: 20),
-                onTap: () {},
-              ),
-              const Divider(height: 1, indent: 56, color: AppColors.border),
-              ListTile(
                 leading: const Icon(Icons.privacy_tip, color: AppColors.textSecondary),
                 title: Text('Privacy Policy', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
                 trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary, size: 20),
-                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(bottom: Radius.circular(AppDimensions.radiusLG))),
                 onTap: () => context.push('/privacy-policy'),
+              ),
+              const Divider(height: 1, indent: 56, color: AppColors.border),
+              ListTile(
+                leading: const Icon(Icons.star, color: AppColors.textSecondary),
+                title: Text('Rate the App', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
+                trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary, size: 20),
+                shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(bottom: Radius.circular(AppDimensions.radiusLG))),
+                onTap: _rateApp,
               ),
             ],
           ),
@@ -523,7 +387,21 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
     );
 
     if (confirm == true) {
-      // Stub delete logic
+      if (context.mounted) {
+        showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+      }
+      try {
+        await FirebaseFirestore.instance.collection('users').doc(uid).delete();
+        await FirebaseAuth.instance.currentUser?.delete();
+        
+        if (context.mounted) Navigator.pop(context);
+        ref.read(authNotifierProvider.notifier).logout();
+      } catch (e) {
+        if (context.mounted) {
+          Navigator.pop(context);
+          SnackbarHelper.error(context, 'Failed to delete account. You may need to sign in again to perform this action. Error: $e');
+        }
+      }
     }
   }
 }

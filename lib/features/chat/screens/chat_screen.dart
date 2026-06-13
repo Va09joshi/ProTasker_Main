@@ -255,7 +255,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
               : const AsyncValue.data(false);
 
             return Scaffold(
-              backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
+              backgroundColor: isDark ? AppColors.darkBackground : AppColors.surfaceAlt,
               appBar: AppBar(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
@@ -326,31 +326,49 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 child: Column(
                   children: [
                     Expanded(
-                      child: messagesAsync.when(
-                        data: (messages) {
-                          return ListView.builder(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-                            reverse: true,
-                            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMD, vertical: AppDimensions.paddingLG),
-                            itemCount: messages.length,
-                            itemBuilder: (context, index) {
-                              final msg = messages[index];
-                              final isMe = msg.senderId == user.uid;
+                      child: Stack(
+                        children: [
+                          Positioned.fill(
+                            child: Center(
+                              child: Opacity(
+                                opacity: 0.05,
+                                child: Image.asset(
+                                  'assets/images/logo_icon.png',
+                                  width: MediaQuery.of(context).size.width * 0.6,
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
+                            ),
+                          ),
+                          Positioned.fill(
+                            child: messagesAsync.when(
+                              data: (messages) {
+                                return ListView.builder(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                                  reverse: true,
+                                  padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMD, vertical: AppDimensions.paddingLG),
+                                  itemCount: messages.length,
+                                  itemBuilder: (context, index) {
+                                    final msg = messages[index];
+                                    final isMe = msg.senderId == user.uid;
 
-                              if (msg.type == MessageType.system) {
-                                return _buildSystemMessage(msg);
-                              }
+                                    if (msg.type == MessageType.system) {
+                                      return _buildSystemMessage(msg);
+                                    }
 
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8.0),
-                                child: _buildMessageBubble(msg, isMe, isDark, chatData),
-                              );
-                            },
-                          );
-                        },
-                        loading: () => const LoadingShimmer(type: ShimmerType.list),
-                        error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.refresh(chatMessagesStreamProvider(widget.chatId))),
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 8.0),
+                                      child: _buildMessageBubble(msg, isMe, isDark, chatData),
+                                    );
+                                  },
+                                );
+                              },
+                              loading: () => const LoadingShimmer(type: ShimmerType.list),
+                              error: (e, _) => ErrorView(message: e.toString(), onRetry: () => ref.refresh(chatMessagesStreamProvider(widget.chatId))),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     _buildInputRow(user, isDark),
@@ -472,40 +490,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.darkSurface : AppColors.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            offset: const Offset(0, -4),
-            blurRadius: 16,
-          )
-        ]
       ),
       child: SafeArea(
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            IconButton(
-              icon: const Icon(Icons.add_rounded, color: AppColors.textSecondary, size: 28),
-              onPressed: () => _pickAndSendImage(user),
-            ),
             Expanded(
               child: Container(
                 constraints: const BoxConstraints(maxHeight: 120),
-                margin: const EdgeInsets.symmetric(vertical: 4),
+                margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkBackground : AppColors.background,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.border.withValues(alpha: 0.5)),
+                  border: Border.all(color: AppColors.border.withValues(alpha: 0.3)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    )
+                  ]
                 ),
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    IconButton(
-                      padding: const EdgeInsets.only(bottom: 8, left: 12),
-                      constraints: const BoxConstraints(),
-                      icon: const Icon(Icons.emoji_emotions_outlined, color: AppColors.textTertiary, size: 24),
-                      onPressed: () {},
-                    ),
                     Expanded(
                       child: TextField(
                         controller: _msgCtrl,
@@ -520,54 +528,38 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         ),
                       ),
                     ),
                     IconButton(
-                      padding: const EdgeInsets.only(bottom: 8, right: 12),
+                      padding: const EdgeInsets.only(bottom: 8, right: 4),
                       constraints: const BoxConstraints(),
-                      icon: const Icon(Icons.attach_file_rounded, color: AppColors.textTertiary, size: 22),
+                      icon: const Icon(Icons.image_outlined, color: AppColors.textSecondary, size: 24),
                       onPressed: () => _pickAndSendImage(user),
+                    ),
+                    ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: _msgCtrl,
+                      builder: (context, value, child) {
+                        final hasText = value.text.trim().isNotEmpty;
+                        return IconButton(
+                          padding: const EdgeInsets.only(bottom: 8, right: 12),
+                          constraints: const BoxConstraints(),
+                          icon: Icon(
+                            Icons.send_rounded, 
+                            color: hasText ? AppColors.primary : AppColors.textTertiary, 
+                            size: 24
+                          ),
+                          onPressed: () {
+                            if (hasText) {
+                              _sendMessage(user);
+                            }
+                          },
+                        );
+                      },
                     ),
                   ],
                 ),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: ValueListenableBuilder<TextEditingValue>(
-                valueListenable: _msgCtrl,
-                builder: (context, value, child) {
-                  final hasText = value.text.trim().isNotEmpty;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    decoration: BoxDecoration(
-                      color: hasText ? AppColors.primary : (isDark ? AppColors.darkBackground : AppColors.background),
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      onPressed: () {
-                        if (hasText) {
-                          _sendMessage(user);
-                        } else {
-                          SnackbarHelper.info(context, 'Voice messages coming soon');
-                        }
-                      },
-                      icon: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        transitionBuilder: (child, anim) => ScaleTransition(scale: anim, child: child),
-                        child: Icon(
-                          hasText ? Icons.send_rounded : Icons.mic_none_rounded,
-                          key: ValueKey<bool>(hasText),
-                          color: hasText ? Colors.white : AppColors.textSecondary,
-                          size: 24,
-                        ),
-                      ),
-                    ),
-                  );
-                },
               ),
             ),
           ],

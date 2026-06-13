@@ -20,7 +20,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     {
       'image': 'assets/images/onboarding/onboarding1.png',
       'title': 'Post Your Tasks',
-      'subtitle': 'Easily describe your problem and get it in front of qualified professionals.',
+      'subtitle': 'Easily describe your work and get it in front of qualified professionals.',
     },
     {
       'image': 'assets/images/onboarding/onboarding2.png',

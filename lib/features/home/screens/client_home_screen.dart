@@ -301,7 +301,15 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
           children: [
             const Icon(Icons.search_rounded, color: AppColors.textSecondary),
             const SizedBox(width: AppDimensions.paddingMD),
-            Text('Search for services...', style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textTertiary)),
+            AnimatedSearchPlaceholder(
+              texts: const [
+                'Search for services...',
+                'Search for plumbers...',
+                'Search for electricians...',
+                'Search for cleaners...',
+              ],
+              style: AppTextStyles.bodyLarge.copyWith(color: AppColors.textTertiary),
+            ),
           ],
         ),
       ),
@@ -316,7 +324,7 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-          border: Border.all(color: AppColors.border, width: 1.5),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.3), width: 1.5),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.04),
@@ -332,7 +340,7 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Got a problem?',
+                    'Need something done?',
                     style: AppTextStyles.headingLarge.copyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.bold,
@@ -349,8 +357,15 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMD, vertical: 8),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
+                      color: AppColors.accent,
                       borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.accent.withValues(alpha: 0.25),
+                          blurRadius: 8,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: Text(
                       'Create a Post',
@@ -365,10 +380,9 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
             ),
             const SizedBox(width: AppDimensions.paddingMD),
             Image.asset(
-              'assets/images/list-check.png',
+              'assets/images/post.png',
               width: 56,
               height: 56,
-              color: AppColors.primary,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) => Container(
                 padding: const EdgeInsets.all(AppDimensions.paddingSM),
@@ -396,37 +410,20 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
         const SizedBox(height: AppDimensions.paddingMD),
         LayoutBuilder(
           builder: (context, constraints) {
-            const double spacing = 16.0;
-            final double itemWidth = (constraints.maxWidth - 2 * spacing) / 3;
-            return Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[0], context)),
-                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[1], context)),
-                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[2], context)),
-                  ],
-                ),
-                const SizedBox(height: AppDimensions.paddingLG),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[3], context)),
-                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[4], context)),
-                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[5], context)),
-                  ],
-                ),
-                const SizedBox(height: AppDimensions.paddingLG),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[6], context)),
-                    const SizedBox(width: spacing),
-                    SizedBox(width: itemWidth, child: _buildCategoryGridItem(categories[7], context)),
-                  ],
-                ),
-              ],
+            return GridView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: EdgeInsets.zero,
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 20,
+                childAspectRatio: 0.65, 
+              ),
+              itemCount: categories.length,
+              itemBuilder: (context, index) {
+                return _buildCategoryGridItem(categories[index], context);
+              },
             );
           },
         ),
@@ -436,40 +433,44 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
 
   Widget _buildCategoryGridItem(ServiceCategory category, BuildContext context) {
     String assetPath;
-    String label;
+    String label = category.displayName;
     
     switch (category) {
       case ServiceCategory.cleaning:
         assetPath = 'assets/images/cleaning.png';
-        label = 'Cleaning';
         break;
       case ServiceCategory.plumbing:
         assetPath = 'assets/images/plumber.png';
-        label = 'Plumbing';
         break;
       case ServiceCategory.electrical:
         assetPath = 'assets/images/electrician.png';
-        label = 'Electrician';
         break;
       case ServiceCategory.painting:
         assetPath = 'assets/images/painter.png';
-        label = 'Painting';
         break;
       case ServiceCategory.carpentry:
         assetPath = 'assets/images/carpentar.png';
-        label = 'Carpentry';
         break;
       case ServiceCategory.appliance:
         assetPath = 'assets/images/appliances_home.png';
-        label = 'Appliance Repair';
         break;
       case ServiceCategory.shifting:
         assetPath = 'assets/images/moving.png';
-        label = 'Moving';
+        break;
+      case ServiceCategory.gardening:
+        assetPath = 'assets/images/gardner.png';
+        break;
+      case ServiceCategory.salon:
+        assetPath = 'assets/images/salon.png';
+        break;
+      case ServiceCategory.hardware:
+        assetPath = 'assets/images/hardware.png';
+        break;
+      case ServiceCategory.mechanic:
+        assetPath = 'assets/images/mechanic.png';
         break;
       case ServiceCategory.other:
         assetPath = 'assets/images/handyman.png';
-        label = 'Other';
         break;
     }
 
@@ -485,11 +486,18 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
             aspectRatio: 1.0,
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: AppColors.border, width: 1.5),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade200, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Image.asset(
                 assetPath,
@@ -497,14 +505,15 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
             label,
             style: AppTextStyles.labelLarge.copyWith(
               color: const Color(0xFF1E293B),
-              fontWeight: FontWeight.w700,
-              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
               height: 1.2,
+              letterSpacing: 0.2,
             ),
             textAlign: TextAlign.center,
             maxLines: 2,
@@ -627,7 +636,8 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
 
   Widget _buildMyPosts(BuildContext context, WidgetRef ref, AsyncValue<List<JobPost>> myPostsAsync) {
     return myPostsAsync.when(
-      data: (posts) {
+      data: (allPosts) {
+        final posts = allPosts.where((p) => p.status != 'completed' && p.status != 'cancelled' && p.status != 'closed').toList();
         if (posts.isEmpty) return const SizedBox.shrink();
         
         return Column(

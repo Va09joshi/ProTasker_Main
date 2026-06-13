@@ -86,8 +86,8 @@ class _AcceptJobSheetState extends ConsumerState<AcceptJobSheet> {
           lng: widget.job.longitude,
         ),
         grossPrice: price,
-        platformFee: price * 0.1, // 10% platform fee
-        netPrice: price * 0.9,
+        platformFee: 0.0, // Neglected platform fee
+        netPrice: price,
         notes: widget.job.description,
         proofImages: [],
         createdAt: DateTime.now(),

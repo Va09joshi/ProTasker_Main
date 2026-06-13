@@ -61,12 +61,12 @@ class _ClientPostProblemScreenState extends ConsumerState<ClientPostProblemScree
       await newProblemRef.set(taskRequest.toMap());
 
       if (mounted) {
-        SnackbarHelper.success(context, 'Problem posted successfully! Providers nearby will see it.');
+        SnackbarHelper.success(context, 'Work posted successfully! Providers nearby will see it.');
         context.pop();
       }
     } catch (e) {
       if (mounted) {
-        SnackbarHelper.error(context, 'Failed to post problem. Please try again.');
+        SnackbarHelper.error(context, 'Failed to post work. Please try again.');
       }
     } finally {
       if (mounted) {
@@ -81,7 +81,7 @@ class _ClientPostProblemScreenState extends ConsumerState<ClientPostProblemScree
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Post a Problem'),
+        title: const Text('Post Work'),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppDimensions.paddingLG),
@@ -103,7 +103,7 @@ class _ClientPostProblemScreenState extends ConsumerState<ClientPostProblemScree
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(
-                  labelText: 'Problem Title',
+                  labelText: 'Work Title',
                   hintText: 'E.g., Plumber needed for leaking pipe',
                 ),
                 validator: (v) {
@@ -137,7 +137,7 @@ class _ClientPostProblemScreenState extends ConsumerState<ClientPostProblemScree
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
-                      : const Text('Post Problem'),
+                      : const Text('Post Work'),
                 ),
               ),
             ],

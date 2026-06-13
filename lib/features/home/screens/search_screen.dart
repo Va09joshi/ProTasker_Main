@@ -178,10 +178,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             child: Wrap(
               alignment: WrapAlignment.spaceBetween,
               spacing: 0.0,
-              runSpacing: 20.0,
+              runSpacing: 24.0,
               children: ServiceCategory.values.map((category) {
                 return SizedBox(
-                  width: (MediaQuery.of(context).size.width - (AppDimensions.paddingLG * 2) - 32) / 3.1,
+                  width: (MediaQuery.of(context).size.width - (AppDimensions.paddingLG * 2) - 24) / 3.05,
                   child: _buildCategoryGridItem(category, context),
                 );
               }).toList(),
@@ -193,30 +193,54 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildCategoryGridItem(ServiceCategory category, BuildContext context) {
-    String label;
+    String assetPath;
+    String label = category.displayName;
     
     switch (category) {
-      case ServiceCategory.cleaning: label = 'Cleaning'; break;
-      case ServiceCategory.plumbing: label = 'Plumbing'; break;
-      case ServiceCategory.electrical: label = 'Electrical'; break;
-      case ServiceCategory.painting: label = 'Painting'; break;
-      case ServiceCategory.carpentry: label = 'Carpentry'; break;
-      case ServiceCategory.appliance: label = 'Appliance'; break;
-      case ServiceCategory.shifting: label = 'Moving'; break;
-      case ServiceCategory.other: label = 'Handyman'; break;
+      case ServiceCategory.cleaning:
+        assetPath = 'assets/images/cleaning.png';
+        break;
+      case ServiceCategory.plumbing:
+        assetPath = 'assets/images/plumber.png';
+        break;
+      case ServiceCategory.electrical:
+        assetPath = 'assets/images/electrician.png';
+        break;
+      case ServiceCategory.painting:
+        assetPath = 'assets/images/painter.png';
+        break;
+      case ServiceCategory.carpentry:
+        assetPath = 'assets/images/carpentar.png';
+        break;
+      case ServiceCategory.appliance:
+        assetPath = 'assets/images/appliances_home.png';
+        break;
+      case ServiceCategory.shifting:
+        assetPath = 'assets/images/moving.png';
+        break;
+      case ServiceCategory.gardening:
+        assetPath = 'assets/images/gardner.png';
+        break;
+      case ServiceCategory.salon:
+        assetPath = 'assets/images/salon.png';
+        break;
+      case ServiceCategory.hardware:
+        assetPath = 'assets/images/hardware.png';
+        break;
+      case ServiceCategory.mechanic:
+        assetPath = 'assets/images/mechanic.png';
+        break;
+      case ServiceCategory.other:
+        assetPath = 'assets/images/handyman.png';
+        break;
     }
 
-    return GestureDetector(
-      onTap: () {
-        context.go('/client/category-providers/${category.name}');
-      },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 90,
-            height: 90,
-            padding: const EdgeInsets.all(16),
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        AspectRatio(
+          aspectRatio: 1,
+          child: Container(
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
@@ -229,25 +253,38 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 ),
               ],
             ),
-            child: Image.asset(
-              'assets/icons/category/${category.name}.png',
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Icon(Icons.build_circle_outlined, color: AppColors.textTertiary),
+            child: Material(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+              child: InkWell(
+                borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                onTap: () {
+                  context.go('/client/category-providers/${category.name}');
+                },
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Image.asset(
+                    assetPath,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.build_circle_outlined, size: 32, color: AppColors.textTertiary),
+                  ),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 12),
-          Text(
-            label,
-            style: AppTextStyles.labelLarge.copyWith(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w600,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 12),
+        Text(
+          label,
+          style: AppTextStyles.labelLarge.copyWith(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w600,
           ),
-        ],
-      ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 

@@ -84,7 +84,7 @@ class AuthRepository {
     }
   }
 
-  Future<UserModel?> signInWithGoogle() async {
+  Future<UserModel?> signInWithGoogle({UserRole role = UserRole.client}) async {
     try {
       await _googleSignIn.initialize(
         serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ?? '',
@@ -108,8 +108,21 @@ class AuthRepository {
       if (doc.exists) {
         return UserModel.fromFirestore(doc);
       } else {
-        // DO NOT create new user record yet. Return null so the UI knows role selection is required.
-        return null;
+        // Create new user record automatically with the provided role
+        final userModel = UserModel(
+          uid: user.uid,
+          name: user.displayName ?? 'Unknown',
+          email: user.email ?? '',
+          phone: user.phoneNumber ?? '',
+          profilePhoto: user.photoURL,
+          role: role,
+          address: Address(street: '', city: '', state: '', pincode: '', lat: 0, lng: 0),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        await docRef.set(userModel.toMap());
+        return userModel;
       }
     } on FirebaseAuthException {
       rethrow;

@@ -59,9 +59,12 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
   void _signupWithGoogle() async {
     setState(() => _loadingType = 2);
-    // Since Google sign up will now redirect to role selection if they don't have a role,
-    // we can just call loginWithGoogle. The AppRouter will handle the rest!
-    await ref.read(authNotifierProvider.notifier).loginWithGoogle();
+    // Determine role based on the selected role for this signup screen
+    final String roleStr = widget.roleName.toLowerCase();
+    UserRole role = roleStr == 'provider' ? UserRole.provider : UserRole.client;
+    
+    // Call loginWithGoogle, passing the selected role so it can auto-create the account
+    await ref.read(authNotifierProvider.notifier).loginWithGoogle(role: role);
   }
 
   @override

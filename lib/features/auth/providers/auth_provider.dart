@@ -48,10 +48,10 @@ class AuthNotifier extends AsyncNotifier<void> {
     ref.read(isSigningUpProvider.notifier).state = false;
   }
 
-  Future<void> loginWithGoogle() async {
+  Future<void> loginWithGoogle({UserRole role = UserRole.client}) async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
-      final user = await _repository.signInWithGoogle();
+      final user = await _repository.signInWithGoogle(role: role);
       // user could be null if they need to select a role. If so, they'll be redirected to roleSelect.
       if (user != null) {
         await FcmNotificationService.initialize();

@@ -4,6 +4,7 @@ class RouteNames {
   static const String roleSelect = 'roleSelect';
   static const String login = 'login';
   static const String signup = 'signup';
+  static const String emailVerification = 'emailVerification';
   static const String profileSetup = 'profileSetup';
   static const String notificationSettings = 'notificationSettings';
   static const String privacySettings = 'privacySettings';
@@ -22,6 +23,7 @@ class RoutePaths {
   static const String roleSelect = '/role-select';
   static const String login = '/login';
   static const String signup = '/signup';
+  static const String emailVerification = '/email-verification';
   static const String profileSetup = '/profile-setup';
   static const String notificationSettings = '/notification-settings';
   static const String clientHome = '/client/home';

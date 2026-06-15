@@ -3,10 +3,18 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/feedback_message.dart';
 import '../models/feedback_type.dart';
+import '../../errors/app_exception.dart';
 
 class ErrorMapper {
   static FeedbackMessage mapError(dynamic error, {Function()? onRetry}) {
-    if (error is FirebaseAuthException) {
+    if (error is AppException) {
+      return FeedbackMessage.error(
+        error.message,
+        title: _getAppExceptionTitle(error.code),
+        code: error.code,
+        onRetry: onRetry,
+      );
+    } else if (error is FirebaseAuthException) {
       return _mapFirebaseAuthError(error);
     } else if (error is FirebaseException) {
       return _mapFirebaseError(error);
@@ -46,7 +54,7 @@ class ErrorMapper {
       case 'invalid-credential':
       case 'wrong-password':
       case 'user-not-found':
-        message = 'Unable to sign in.\nPlease check your information.';
+        message = 'Incorrect email or password.';
         break;
       case 'user-disabled':
         message = 'This account has been disabled. Please contact support.';
@@ -88,5 +96,18 @@ class ErrorMapper {
         message = 'A server error occurred. Please try again later.';
     }
     return FeedbackMessage.error(message, title: 'Server Error', code: error.code);
+  }
+
+  static String _getAppExceptionTitle(String code) {
+    switch (code) {
+      case 'auth-error':
+        return 'Authentication Error';
+      case 'network-error':
+        return 'Network Error';
+      case 'firestore-error':
+        return 'Database Error';
+      default:
+        return 'Error';
+    }
   }
 }

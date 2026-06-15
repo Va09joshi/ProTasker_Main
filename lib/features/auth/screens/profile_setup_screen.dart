@@ -42,6 +42,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   String _experienceYears = '1';
   final _bioController = TextEditingController();
   File? _idProofFile;
+  final List<File> _portfolioFiles = [];
   final List<String> _serviceAreas = [];
   final _serviceAreaController = TextEditingController();
 
@@ -111,6 +112,16 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     }
   }
 
+  Future<void> _pickPortfolioImages() async {
+    final picker = ImagePicker();
+    final pickedFiles = await picker.pickMultiImage(imageQuality: 70);
+    if (pickedFiles.isNotEmpty) {
+      setState(() {
+        _portfolioFiles.addAll(pickedFiles.map((x) => File(x.path)));
+      });
+    }
+  }
+
   Future<String?> _uploadFile(File file, String path) async {
     try {
       setState(() => _uploadProgress = 0.5);
@@ -126,11 +137,15 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
   }
 
   void _nextStep() {
-    if (_currentStep == 0) {
+    final userModel = ref.read(currentUserProvider).value;
+    final maxSteps = userModel?.role == UserRole.provider ? 1 : 0;
+    
+    if (_currentStep < maxSteps) {
       if (_step1FormKey.currentState!.validate()) {
         setState(() => _currentStep++);
       }
     } else {
+      if (_currentStep == 0 && !_step1FormKey.currentState!.validate()) return;
       _submitForm();
     }
   }
@@ -142,6 +157,14 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     if (userModel.role == UserRole.provider) {
        if (_selectedCategories.isEmpty) {
          SnackbarHelper.warning(context, 'Please select at least one category');
+         return;
+       }
+       if (_serviceAreas.isEmpty) {
+         SnackbarHelper.warning(context, 'Please add at least one service area (city)');
+         return;
+       }
+       if (_idProofFile == null) {
+         SnackbarHelper.warning(context, 'Please upload an ID proof');
          return;
        }
        if (_step2FormKey.currentState?.validate() != true) return;
@@ -159,8 +182,15 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
       }
 
       String? idProofUrl;
-      if (userModel.role == UserRole.provider && _idProofFile != null) {
-        idProofUrl = await _uploadFile(_idProofFile!, 'users/${userModel.uid}/id_proof.jpg');
+      List<String> portfolioUrls = [];
+      if (userModel.role == UserRole.provider) {
+        if (_idProofFile != null) {
+          idProofUrl = await _uploadFile(_idProofFile!, 'users/${userModel.uid}/id_proof.jpg');
+        }
+        for (var i = 0; i < _portfolioFiles.length; i++) {
+          final url = await _uploadFile(_portfolioFiles[i], 'users/${userModel.uid}/portfolio_$i.jpg');
+          if (url != null) portfolioUrls.add(url);
+        }
       }
 
       final Map<String, dynamic> updateData = {
@@ -187,6 +217,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
         updateData['bio'] = _bioController.text.trim();
         if (idProofUrl != null) updateData['idProof'] = idProofUrl;
         updateData['serviceAreas'] = _serviceAreas;
+        if (portfolioUrls.isNotEmpty) updateData['portfolioImages'] = portfolioUrls;
       }
 
       await ref.read(authNotifierProvider.notifier).updateProfile(userModel.uid, updateData);
@@ -207,7 +238,22 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
     final userModel = userModelAsync.value;
 
     if (userModel == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset(
+                'assets/images/technical-service.gif',
+                width: 120,
+                height: 120,
+              ),
+              const SizedBox(height: 16),
+              const Text('Setting up your profile...', style: TextStyle(color: Colors.grey)),
+            ],
+          ),
+        ),
+      );
     }
 
     return Scaffold(
@@ -239,7 +285,7 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                         children: [
                           Expanded(
                             child: AppButton(
-                              label: _currentStep == 1 ? 'Complete Setup' : 'Next',
+                              label: _currentStep == (userModel.role == UserRole.provider ? 1 : 0) ? 'Complete Setup' : 'Next',
                               isLoading: _isLoading,
                               onPressed: details.onStepContinue,
                             ),
@@ -352,15 +398,41 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                               keyboardType: TextInputType.number,
                               validator: (val) => val == null || val.isEmpty ? 'Required' : null,
                             ),
+                            if (userModel.role == UserRole.client) ...[
+                              const SizedBox(height: AppDimensions.paddingXL),
+                              const Text('What services are you interested in?', style: AppTextStyles.headingMedium),
+                              const SizedBox(height: AppDimensions.paddingMD),
+                              Wrap(
+                                spacing: 8.0,
+                                runSpacing: 8.0,
+                                children: ServiceCategory.values.map((category) {
+                                  final isSelected = _selectedCategories.contains(category);
+                                  return CategoryChip(
+                                    category: category,
+                                    isSelected: isSelected,
+                                    onTap: () {
+                                      setState(() {
+                                        if (isSelected) {
+                                          _selectedCategories.remove(category);
+                                        } else {
+                                          _selectedCategories.add(category);
+                                        }
+                                      });
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            ],
                           ],
                         ),
                       ),
                     ),
-                    Step(
-                      title: const Text('Service Details', style: AppTextStyles.labelLarge),
-                      isActive: _currentStep >= 1,
-                      content: userModel.role == UserRole.client ? _buildClientStep2() : _buildProviderStep2(),
-                    ),
+                    if (userModel.role == UserRole.provider)
+                      Step(
+                        title: const Text('Service Details', style: AppTextStyles.labelLarge),
+                        isActive: _currentStep >= 1,
+                        content: _buildProviderStep2(),
+                      ),
                   ],
                 ),
               ),
@@ -368,36 +440,6 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildClientStep2() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('What services are you interested in?', style: AppTextStyles.headingMedium),
-        const SizedBox(height: AppDimensions.paddingMD),
-        Wrap(
-          spacing: 8.0,
-          runSpacing: 8.0,
-          children: ServiceCategory.values.map((category) {
-            final isSelected = _selectedCategories.contains(category);
-            return CategoryChip(
-              category: category,
-              isSelected: isSelected,
-              onTap: () {
-                setState(() {
-                  if (isSelected) {
-                    _selectedCategories.remove(category);
-                  } else {
-                    _selectedCategories.add(category);
-                  }
-                });
-              },
-            );
-          }).toList(),
-        ),
-      ],
     );
   }
 
@@ -488,6 +530,68 @@ class _ProfileSetupScreenState extends ConsumerState<ProfileSetupScreen> {
                     ),
             ),
           ),
+          const SizedBox(height: AppDimensions.paddingXL),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Portfolio Images', style: AppTextStyles.headingMedium),
+              TextButton.icon(
+                onPressed: _pickPortfolioImages,
+                icon: const Icon(Icons.add_photo_alternate, size: 18),
+                label: const Text('Add Images'),
+              ),
+            ],
+          ),
+          if (_portfolioFiles.isNotEmpty)
+            SizedBox(
+              height: 100,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _portfolioFiles.length,
+                separatorBuilder: (_, __) => const SizedBox(width: AppDimensions.paddingSM),
+                itemBuilder: (context, index) {
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                        child: Image.file(_portfolioFiles[index], width: 100, height: 100, fit: BoxFit.cover),
+                      ),
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () => setState(() => _portfolioFiles.removeAt(index)),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close, size: 14, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            )
+          else
+            Container(
+              height: 100,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                border: Border.all(color: AppColors.border, width: AppDimensions.cardBorderWidth, style: BorderStyle.solid),
+                borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                color: AppColors.surfaceAlt,
+              ),
+              child: Center(
+                child: Text(
+                  'No portfolio images added',
+                  style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textTertiary),
+                ),
+              ),
+            ),
           const SizedBox(height: AppDimensions.paddingXL),
           const Text('Service Areas (Cities)', style: AppTextStyles.headingMedium),
           const SizedBox(height: AppDimensions.paddingSM),

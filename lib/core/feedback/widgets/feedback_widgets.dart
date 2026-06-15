@@ -61,17 +61,8 @@ class CustomSnackbar extends SnackBar {
         );
 
   static Color _getBackgroundColor(FeedbackType type) {
-    switch (type) {
-      case FeedbackType.success:
-        return Colors.green.shade800;
-      case FeedbackType.error:
-        return Colors.red.shade800;
-      case FeedbackType.warning:
-        return Colors.orange.shade800;
-      case FeedbackType.info:
-      default:
-        return Colors.blue.shade800;
-    }
+    // Return low opacity black for all types
+    return Colors.black.withOpacity(0.8);
   }
 }
 

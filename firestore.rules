@@ -112,6 +112,11 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Email OTPs
+    match /email_otps/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
     // Admins Collection
     match /admins/{adminId} {
       allow read, write: if isAdmin();

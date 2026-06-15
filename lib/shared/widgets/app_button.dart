@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/theme.dart';
 
 enum ButtonVariant { primary, secondary, danger, ghost, text }
@@ -47,11 +48,18 @@ class AppButton extends StatelessWidget {
                   Icon(icon, size: AppDimensions.iconMD),
                   const SizedBox(width: AppDimensions.paddingSM),
                 ],
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.3,
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      label,
+                      style: GoogleFonts.lexendDeca(
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -152,9 +160,16 @@ class AppButton extends StatelessWidget {
                 Icon(icon, size: AppDimensions.iconMD),
                 const SizedBox(width: AppDimensions.paddingSM),
               ],
-              Text(
-                label,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    label,
+                    style: GoogleFonts.lexendDeca(
+                      textStyle: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

@@ -7,6 +7,12 @@ import '../../../features/notifications/services/notification_service.dart';
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepository();
 });
+class IsSigningUpNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+}
+
+final isSigningUpProvider = NotifierProvider<IsSigningUpNotifier, bool>(IsSigningUpNotifier.new);
 
 class AuthNotifier extends AsyncNotifier<void> {
   late AuthRepository _repository;
@@ -32,21 +38,37 @@ class AuthNotifier extends AsyncNotifier<void> {
     required String password,
     required UserRole role,
   }) async {
+    ref.read(isSigningUpProvider.notifier).state = true;
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final user = await _repository.signUpWithEmail(name, email, phone, password, role);
       await FcmNotificationService.initialize();
       await FcmNotificationService.syncToken();
     });
+    ref.read(isSigningUpProvider.notifier).state = false;
   }
 
   Future<void> loginWithGoogle() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       final user = await _repository.signInWithGoogle();
+      // user could be null if they need to select a role. If so, they'll be redirected to roleSelect.
+      if (user != null) {
+        await FcmNotificationService.initialize();
+        await FcmNotificationService.syncToken();
+      }
+    });
+  }
+
+  Future<void> completeGoogleSignup(UserRole role) async {
+    ref.read(isSigningUpProvider.notifier).state = true;
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await _repository.completeGoogleSignup(role: role);
       await FcmNotificationService.initialize();
       await FcmNotificationService.syncToken();
     });
+    ref.read(isSigningUpProvider.notifier).state = false;
   }
 
   Future<void> logout() async {
@@ -68,6 +90,13 @@ class AuthNotifier extends AsyncNotifier<void> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await _repository.sendPasswordResetEmail(email);
+    });
+  }
+
+  Future<void> sendEmailVerification() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(() async {
+      await _repository.sendEmailVerification();
     });
   }
 }

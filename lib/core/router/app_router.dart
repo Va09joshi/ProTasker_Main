@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../shared/providers/user_session_provider.dart';
 import '../../shared/models/models.dart';
 import 'route_names.dart';
+import '../../features/auth/providers/auth_provider.dart';
 import '../../features/auth/screens/screens.dart';
 
 import '../../features/home/screens/client_shell.dart';
@@ -94,6 +95,7 @@ class RouterNotifier extends ChangeNotifier {
   RouterNotifier(this._ref) {
     _ref.listen(authStateProvider, (_, __) => notifyListeners());
     _ref.listen(currentUserProvider, (_, __) => notifyListeners());
+    _ref.listen(isSigningUpProvider, (_, __) => notifyListeners());
   }
 }
 
@@ -105,6 +107,9 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: RoutePaths.splash,
     refreshListenable: notifier,
     redirect: (BuildContext context, GoRouterState state) {
+      final isSigningUp = ref.read(isSigningUpProvider);
+      if (isSigningUp) return null;
+
       final authState = ref.read(authStateProvider);
       final userModelAsync = ref.read(currentUserProvider);
 
@@ -117,23 +122,33 @@ final routerProvider = Provider<GoRouter>((ref) {
       ];
       final isUnauthRoute = unauthRoutes.contains(state.matchedLocation);
 
+      final user = authState.value;
+      
+      // If user is logged out, send to login (or let them stay on unauth routes)
+      if (user == null) {
+        if (authState.isLoading) return null;
+        return isUnauthRoute ? null : RoutePaths.login;
+      }
+
+      // Wait for the user model to load from Firestore before checking profile status
       if (authState.isLoading || userModelAsync.isLoading) {
         return null; 
       }
 
-      final user = authState.value;
-      if (user == null) {
-        return isUnauthRoute ? null : RoutePaths.login;
+      // If user is logged in but not verified via Firebase Auth link
+      if (!user.emailVerified) {
+        if (state.matchedLocation == RoutePaths.emailVerification) return null;
+        return RoutePaths.emailVerification;
       }
 
       final userModel = userModelAsync.value;
       if (userModel == null) {
-        if (state.matchedLocation == RoutePaths.profileSetup) return null;
-        return RoutePaths.profileSetup;
+        if (state.matchedLocation == RoutePaths.roleSelect || state.matchedLocation == RoutePaths.profileSetup || state.matchedLocation == RoutePaths.mapPicker) return null;
+        return RoutePaths.roleSelect;
       }
 
       if (!userModel.profileComplete) {
-        if (state.matchedLocation == RoutePaths.profileSetup) return null;
+        if (state.matchedLocation == RoutePaths.profileSetup || state.matchedLocation == RoutePaths.mapPicker) return null;
         return RoutePaths.profileSetup;
       }
 
@@ -175,6 +190,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           final role = state.uri.queryParameters['role'] ?? 'client';
           return SignupScreen(roleName: role);
         },
+      ),
+      GoRoute(
+        path: RoutePaths.emailVerification,
+        name: RouteNames.emailVerification,
+        builder: (context, state) => const EmailVerificationScreen(),
       ),
       GoRoute(
         path: RoutePaths.profileSetup,

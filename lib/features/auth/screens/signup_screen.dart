@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/theme.dart';
@@ -7,7 +8,9 @@ import '../../../core/constants/app_images.dart';
 import '../../../shared/models/models.dart';
 import '../providers/auth_provider.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/errors/app_exception.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../core/feedback/services/feedback_service.dart';
 
 class SignupScreen extends ConsumerStatefulWidget {
   final String roleName;
@@ -26,8 +29,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _confirmController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   bool _termsAccepted = false;
+  int _loadingType = 0; // 0 = none, 1 = normal, 2 = google
 
   void _signup() async {
+    setState(() => _loadingType = 1);
     if (_formKey.currentState!.validate()) {
       if (_passwordController.text != _confirmController.text) {
         SnackbarHelper.error(context, 'Passwords do not match.');
@@ -39,10 +44,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         return;
       }
       
-      UserRole role = UserRole.client;
-      try {
-        role = UserRole.values.byName(widget.roleName);
-      } catch (_) {}
+      final String roleStr = widget.roleName.toLowerCase();
+      UserRole role = roleStr == 'provider' ? UserRole.provider : UserRole.client;
 
       await ref.read(authNotifierProvider.notifier).signup(
             name: _nameController.text.trim(),
@@ -54,17 +57,22 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     }
   }
 
+  void _signupWithGoogle() async {
+    setState(() => _loadingType = 2);
+    // Since Google sign up will now redirect to role selection if they don't have a role,
+    // we can just call loginWithGoogle. The AppRouter will handle the rest!
+    await ref.read(authNotifierProvider.notifier).loginWithGoogle();
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final authState = ref.watch(authNotifierProvider);
 
     ref.listen(authNotifierProvider, (previous, next) {
       next.whenOrNull(
         error: (error, stack) {
-          final msg = (error.runtimeType.toString() == 'AppException') 
-              ? (error as dynamic).message 
-              : error.toString().replaceAll('Exception: ', '').replaceAll('AppException: ', '');
-          SnackbarHelper.error(context, msg);
+          ref.read(feedbackServiceProvider).handleError(error);
         },
       );
     });
@@ -126,7 +134,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                     controller: _phoneController,
                     label: 'Phone Number',
                     prefixIcon: const Icon(Icons.phone_outlined, size: 20),
-                    validator: (value) => value == null || value.length < 8 ? 'Enter valid phone number' : null,
+                    validator: (value) {
+                      if (value == null || value.isEmpty) return 'Enter phone number';
+                      if (!RegExp(r'^\d{10}$').hasMatch(value.trim())) return 'Phone number must be exactly 10 digits';
+                      return null;
+                    },
                     keyboardType: TextInputType.phone,
                     enabled: !isLoading,
                   ),
@@ -198,10 +210,40 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                   
                   AppButton(
                     label: 'Create Account',
-                    isLoading: isLoading,
-                    onPressed: _signup,
+                    isLoading: isLoading && _loadingType == 1,
+                    onPressed: isLoading ? null : _signup,
                   ),
                   const SizedBox(height: AppDimensions.paddingLG),
+                  
+                  Row(
+                    children: [
+                      Expanded(child: Divider(color: isDark ? AppColors.darkBorder : AppColors.border)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMD),
+                        child: Text(
+                          'OR',
+                          style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: isDark ? AppColors.darkBorder : AppColors.border)),
+                    ],
+                  ),
+                  const SizedBox(height: AppDimensions.paddingLG),
+
+                  // Google button
+                  AppButton(
+                    label: 'Sign up with Google',
+                    iconWidget: Image.network(
+                      'https://developers.google.com/identity/images/g-logo.png',
+                      height: 24,
+                      width: 24,
+                      errorBuilder: (context, error, stackTrace) => const FaIcon(FontAwesomeIcons.google, size: 20),
+                    ),
+                    variant: ButtonVariant.secondary,
+                    isLoading: isLoading && _loadingType == 2,
+                    onPressed: isLoading ? null : _signupWithGoogle,
+                  ),
+                  const SizedBox(height: AppDimensions.paddingXL),
                   
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,

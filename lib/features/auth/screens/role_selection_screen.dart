@@ -1,23 +1,27 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/router/route_names.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/widgets.dart';
+import '../../../shared/providers/user_session_provider.dart';
+import '../providers/auth_provider.dart';
 
-class RoleSelectionScreen extends StatefulWidget {
+class RoleSelectionScreen extends ConsumerStatefulWidget {
   const RoleSelectionScreen({super.key});
 
   @override
-  State<RoleSelectionScreen> createState() => _RoleSelectionScreenState();
+  ConsumerState<RoleSelectionScreen> createState() => _RoleSelectionScreenState();
 }
 
-class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
+class _RoleSelectionScreenState extends ConsumerState<RoleSelectionScreen> {
   UserRole? _selectedRole;
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isSigningUp = ref.watch(isSigningUpProvider);
     
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : const Color(0xFFF8F9FA),
@@ -65,10 +69,21 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
               const Spacer(),
               AppButton(
                 label: 'Continue',
-                onPressed: _selectedRole == null
+                isLoading: isSigningUp,
+                onPressed: _selectedRole == null || isSigningUp
                     ? null
-                    : () {
-                        context.push('${RoutePaths.signup}?role=${_selectedRole!.name}');
+                    : () async {
+                        final authState = ref.read(authStateProvider).value;
+                        if (authState != null) {
+                          // User is already authenticated (e.g. Google Sign-In) but lacks a role
+                          await ref.read(authNotifierProvider.notifier).completeGoogleSignup(_selectedRole!);
+                        } else {
+                          // Normal flow: go to signup screen
+                          final roleString = _selectedRole == UserRole.provider ? 'provider' : 'client';
+                          if (context.mounted) {
+                            context.pushNamed(RouteNames.signup, queryParameters: {'role': roleString});
+                          }
+                        }
                       },
               ),
               const SizedBox(height: AppDimensions.paddingMD),

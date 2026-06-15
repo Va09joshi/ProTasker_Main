@@ -101,46 +101,92 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   void _forgotPassword() {
-    showDialog(
+    showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
         final resetEmailController = TextEditingController();
-        return AlertDialog(
-          title: const Text('Reset Password'),
-          content: AppTextField(
-            controller: resetEmailController,
-            label: 'Email Address',
-            keyboardType: TextInputType.emailAddress,
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        
+        return Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
-          actionsPadding: const EdgeInsets.fromLTRB(AppDimensions.paddingLG, 0, AppDimensions.paddingLG, AppDimensions.paddingLG),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: AppButton(
-                    label: 'Cancel',
-                    variant: ButtonVariant.ghost,
-                    onPressed: () => Navigator.pop(context),
+          padding: EdgeInsets.fromLTRB(
+            AppDimensions.paddingXL,
+            AppDimensions.paddingXL,
+            AppDimensions.paddingXL,
+            MediaQuery.of(context).viewInsets.bottom + AppDimensions.paddingXL,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 48,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.grey[800] : Colors.grey[300],
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                const SizedBox(width: AppDimensions.padding12),
-                Expanded(
-                  child: AppButton(
-                    label: 'Send',
-                    onPressed: () async {
-                      Navigator.pop(context);
-                      if (resetEmailController.text.isNotEmpty) {
-                        await ref.read(authNotifierProvider.notifier).resetPassword(resetEmailController.text.trim());
-                        if (mounted) {
-                          SnackbarHelper.success(context, 'Password reset email sent');
+              ),
+              const SizedBox(height: AppDimensions.paddingXL),
+              Text('Reset Password', style: AppTextStyles.headingMedium),
+              const SizedBox(height: 8),
+              Text(
+                'Enter your email to receive a password reset link.',
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: AppDimensions.paddingXL),
+              AppTextField(
+                controller: resetEmailController,
+                label: 'Email Address',
+                keyboardType: TextInputType.emailAddress,
+                prefixIcon: const Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    FaIcon(FontAwesomeIcons.solidEnvelope, size: 18),
+                  ],
+                ),
+              ),
+              const SizedBox(height: AppDimensions.paddingXL),
+              Row(
+                children: [
+                  Expanded(
+                    child: AppButton(
+                      label: 'Cancel',
+                      variant: ButtonVariant.ghost,
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ),
+                  const SizedBox(width: AppDimensions.padding12),
+                  Expanded(
+                    child: AppButton(
+                      label: 'Send',
+                      onPressed: () async {
+                        Navigator.pop(context);
+                        if (resetEmailController.text.isNotEmpty) {
+                          await ref.read(authNotifierProvider.notifier).resetPassword(resetEmailController.text.trim());
+                          if (mounted) {
+                            if (!ref.read(authNotifierProvider).hasError) {
+                              SnackbarHelper.success(context, 'Password reset link sent! Please check your inbox.');
+                            }
+                          }
                         }
-                      }
-                    },
+                      },
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         );
       },
     );
@@ -302,6 +348,21 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                         label: 'Sign In',
                         isLoading: isLoading && _loadingType == 1,
                         onPressed: isLoading ? null : _login,
+                      ),
+                      const SizedBox(height: AppDimensions.paddingLG),
+                      
+                      Row(
+                        children: [
+                          Expanded(child: Divider(color: isDark ? AppColors.darkBorder : AppColors.border)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMD),
+                            child: Text(
+                              'OR',
+                              style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ),
+                          Expanded(child: Divider(color: isDark ? AppColors.darkBorder : AppColors.border)),
+                        ],
                       ),
                       const SizedBox(height: AppDimensions.paddingLG),
 

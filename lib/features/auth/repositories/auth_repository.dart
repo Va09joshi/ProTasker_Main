@@ -4,6 +4,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import '../../../shared/models/models.dart';
 import '../../../core/errors/app_exception.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 class AuthRepository {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -12,17 +14,22 @@ class AuthRepository {
 
   Future<UserModel> signUpWithEmail(String name, String email, String phone, String password, UserRole role) async {
     try {
-      final phoneQuery = await _firestore.collection('users').where('phone', isEqualTo: phone).get();
-      if (phoneQuery.docs.isNotEmpty) {
-        throw AppException.auth('Phone number is already in use by another account.');
-      }
-
       final userCredential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
       final user = userCredential.user;
       if (user == null) {
         throw AppException.auth('User creation failed.');
       }
 
+      // Wait a moment for the new auth token to propagate to the Firestore SDK to avoid PERMISSION_DENIED
+      await Future.delayed(const Duration(milliseconds: 1000));
+
+      // Check if phone number is already in use (done after auth creation so we pass Firestore rules)
+      final phoneQuery = await _firestore.collection('users').where('phone', isEqualTo: phone).get();
+      if (phoneQuery.docs.isNotEmpty) {
+        await user.delete(); // Rollback auth creation
+        throw AppException.auth('Phone number is already in use by another account.');
+      }
+      
       final userModel = UserModel(
         uid: user.uid,
         name: name,
@@ -35,14 +42,22 @@ class AuthRepository {
       );
 
       await _firestore.collection('users').doc(user.uid).set(userModel.toMap());
-      return userModel;
-    } on FirebaseAuthException catch (e) {
-      if (e.code == 'email-already-in-use') {
-        throw AppException.auth('Email is already occupied by another account.');
+      
+      try {
+        await user.sendEmailVerification();
+      } catch (e) {
+        // Ignore email verification failure so it doesn't break user creation
       }
-      throw AppException.auth(e.message ?? 'An error occurred during sign up.');
+
+      return userModel;
+    } on FirebaseAuthException {
+      rethrow;
+    } on FirebaseException {
+      rethrow;
+    } on AppException {
+      rethrow;
     } catch (e) {
-      throw AppException.auth('An unknown error occurred.');
+      throw AppException.auth('An unknown error occurred: $e');
     }
   }
 
@@ -60,14 +75,16 @@ class AuthRepository {
       }
 
       return UserModel.fromFirestore(doc);
-    } on FirebaseAuthException catch (e) {
-      throw AppException.auth(e.message ?? 'Invalid email or password.');
+    } on FirebaseAuthException {
+      rethrow;
+    } on FirebaseException {
+      rethrow;
     } catch (e) {
       throw AppException.auth('An unknown error occurred.');
     }
   }
 
-  Future<UserModel> signInWithGoogle() async {
+  Future<UserModel?> signInWithGoogle() async {
     try {
       await _googleSignIn.initialize(
         serverClientId: dotenv.env['GOOGLE_SERVER_CLIENT_ID'] ?? '',
@@ -91,34 +108,49 @@ class AuthRepository {
       if (doc.exists) {
         return UserModel.fromFirestore(doc);
       } else {
-        // Create new user record for Google sign in, defaulting to client
-        final userModel = UserModel(
-          uid: user.uid,
-          name: user.displayName ?? 'Unknown',
-          email: user.email ?? '',
-          phone: user.phoneNumber ?? '',
-          profilePhoto: user.photoURL,
-          role: UserRole.client, // default role
-          address: Address(street: '', city: '', state: '', pincode: '', lat: 0, lng: 0),
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        );
-        await docRef.set(userModel.toMap());
-        return userModel;
+        // DO NOT create new user record yet. Return null so the UI knows role selection is required.
+        return null;
       }
-    } on FirebaseAuthException catch (e) {
-      throw AppException.auth(e.message ?? 'Google sign-in failed.');
+    } on FirebaseAuthException {
+      rethrow;
+    } on FirebaseException {
+      rethrow;
     } catch (e) {
       throw AppException.auth('Google sign-in error: $e');
     }
+  }
+
+  Future<UserModel> completeGoogleSignup({required UserRole role}) async {
+    final user = _auth.currentUser;
+    if (user == null) {
+      throw AppException.auth('No authenticated user found for Google sign-up completion.');
+    }
+
+    final docRef = _firestore.collection('users').doc(user.uid);
+    final userModel = UserModel(
+      uid: user.uid,
+      name: user.displayName ?? 'Unknown',
+      email: user.email ?? '',
+      phone: user.phoneNumber ?? '',
+      profilePhoto: user.photoURL,
+      role: role,
+      address: Address(street: '', city: '', state: '', pincode: '', lat: 0, lng: 0),
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    await docRef.set(userModel.toMap());
+    return userModel;
   }
 
   Future<void> signOut() async {
     try {
       await _googleSignIn.signOut();
       await _auth.signOut();
-    } on FirebaseAuthException catch (e) {
-      throw AppException.auth(e.message ?? 'Failed to sign out.');
+    } on FirebaseAuthException {
+      rethrow;
+    } on FirebaseException {
+      rethrow;
     } catch (e) {
       throw AppException.auth('An unknown error occurred.');
     }
@@ -127,8 +159,25 @@ class AuthRepository {
   Future<void> sendPasswordResetEmail(String email) async {
     try {
       await _auth.sendPasswordResetEmail(email: email);
-    } on FirebaseAuthException catch (e) {
-      throw AppException.auth(e.message ?? 'Failed to send password reset email.');
+    } on FirebaseAuthException {
+      rethrow;
+    } on FirebaseException {
+      rethrow;
+    } catch (e) {
+      throw AppException.auth('An unknown error occurred.');
+    }
+  }
+
+  Future<void> sendEmailVerification() async {
+    try {
+      final user = _auth.currentUser;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+      }
+    } on FirebaseAuthException {
+      rethrow;
+    } on FirebaseException {
+      rethrow;
     } catch (e) {
       throw AppException.auth('An unknown error occurred.');
     }

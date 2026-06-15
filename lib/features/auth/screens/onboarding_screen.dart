@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/theme/theme.dart';
 import '../../../core/router/route_names.dart';
@@ -18,19 +19,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<Map<String, dynamic>> _pages = [
     {
-      'image': 'assets/images/onboarding/onboarding1.png',
-      'title': 'Post Your Tasks',
-      'subtitle': 'Easily describe your work and get it in front of qualified professionals.',
+      'image': 'assets/images/onboarding/planning.gif',
+      'title': 'Streamline Your Workflow',
+      'subtitle': 'Delegate your everyday tasks to verified professionals. Focus your time and energy on what matters most to you, while our experts handle the heavy lifting with precision and care.',
     },
     {
-      'image': 'assets/images/onboarding/onboarding2.png',
-      'title': 'Find the Right Pro',
-      'subtitle': 'Compare skills, ratings, and quotes to choose the best expert for the job.',
+      'image': 'assets/images/onboarding/efficiency.gif',
+      'title': 'Connect with Experts',
+      'subtitle': 'Browse through a curated network of top-rated professionals. Compare their skills, read genuine customer reviews, and choose the perfect match for your specific project needs in just a few taps.',
     },
     {
-      'image': 'assets/images/onboarding/onboarding3.png',
-      'title': 'Get Things Done',
-      'subtitle': 'Relax while our trusted professionals handle your tasks efficiently and securely.',
+      'image': 'assets/images/onboarding/clipboard-gear.gif',
+      'title': 'Track Progress Seamlessly',
+      'subtitle': 'Experience complete peace of mind with real-time updates and secure milestone tracking. Our intuitive dashboard keeps you informed every step of the way until the job is done perfectly.',
     },
   ];
 
@@ -69,24 +70,28 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         const Spacer(flex: 2),
                         Image.asset(
                           page['image'] as String,
-                          height: 280,
+                          height: 160,
                           fit: BoxFit.contain,
                         ),
                         const Spacer(),
                         Text(
                           page['title'] as String,
-                          style: AppTextStyles.displayMedium.copyWith(
-                            color: AppColors.textPrimary,
-                            fontWeight: FontWeight.bold,
+                          style: GoogleFonts.lexendDeca(
+                            textStyle: AppTextStyles.displayMedium.copyWith(
+                              color: AppColors.textPrimary,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: AppDimensions.paddingLG),
                         Text(
                           page['subtitle'] as String,
-                          style: AppTextStyles.bodyLarge.copyWith(
-                            color: AppColors.textSecondary,
-                            height: 1.5,
+                          style: GoogleFonts.lexendDeca(
+                            textStyle: AppTextStyles.bodyLarge.copyWith(
+                              color: AppColors.textSecondary,
+                              height: 1.6,
+                            ),
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -131,24 +136,49 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     )
                   else
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Expanded(
-                          child: AppButton(
-                            label: 'Skip',
-                            variant: ButtonVariant.text,
-                            onPressed: _finishOnboarding,
+                        TextButton(
+                          onPressed: _finishOnboarding,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                          ),
+                          child: Text(
+                            'Skip',
+                            style: GoogleFonts.lexendDeca(
+                              textStyle: AppTextStyles.labelLarge.copyWith(
+                                color: AppColors.textSecondary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
-                        const SizedBox(width: AppDimensions.paddingMD),
-                        Expanded(
-                          child: AppButton(
-                            label: 'Next',
-                            onPressed: () {
-                              _pageController.nextPage(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            },
+                        InkWell(
+                          onTap: () {
+                            _pageController.nextPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          },
+                          borderRadius: BorderRadius.circular(30),
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF17C37B), // Minty Green to match the image
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Color(0x4017C37B),
+                                  blurRadius: 12,
+                                  offset: Offset(0, 6),
+                                )
+                              ]
+                            ),
+                            child: const Icon(
+                              Icons.arrow_forward,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                           ),
                         ),
                       ],

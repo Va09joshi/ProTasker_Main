@@ -1,4 +1,4 @@
-# ProTasker App Summary + Claude Prompt
+# ProTasker App Summary
 
 ## What ProTasker Actually Is
 

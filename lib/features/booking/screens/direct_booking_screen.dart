@@ -32,17 +32,36 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
   final _notesController = TextEditingController();
   final _priceController = TextEditingController(text: '0'); // To be negotiated
 
-  DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
-  String _selectedTimeSlot = '09:00 AM - 11:00 AM';
+  DateTime _selectedDate = DateTime.now();
+  String _selectedTimeSlot = '';
   String? _selectedCategory;
 
-  final List<String> _timeSlots = [
-    '09:00 AM - 11:00 AM',
-    '11:00 AM - 01:00 PM',
-    '01:00 PM - 03:00 PM',
-    '03:00 PM - 05:00 PM',
-    '05:00 PM - 07:00 PM',
-  ];
+  List<String> get _availableTimeSlots {
+    final now = DateTime.now();
+    final isToday = _selectedDate.year == now.year && _selectedDate.month == now.month && _selectedDate.day == now.day;
+    
+    final allSlots = [
+      '09:00 AM - 11:00 AM',
+      '11:00 AM - 01:00 PM',
+      '01:00 PM - 03:00 PM',
+      '03:00 PM - 05:00 PM',
+      '05:00 PM - 07:00 PM',
+    ];
+
+    if (!isToday) return allSlots;
+
+    return allSlots.where((slot) {
+      final startTimeStr = slot.split(' - ')[0];
+      final format = DateFormat('hh:mm a');
+      try {
+        final startTime = format.parse(startTimeStr);
+        final slotDateTime = DateTime(now.year, now.month, now.day, startTime.hour, startTime.minute);
+        return slotDateTime.isAfter(now);
+      } catch (e) {
+        return true;
+      }
+    }).toList();
+  }
 
   bool _isLoading = false;
   bool _isEmergency = false;
@@ -263,24 +282,29 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
                               ],
                             ),
                             const SizedBox(height: AppDimensions.paddingSM),
-                            DropdownButtonFormField<String>(
-                              value: _selectedCategory,
-                              icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.accent),
-                              decoration: InputDecoration(
-                                filled: true,
-                                fillColor: AppColors.background,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-                                  borderSide: BorderSide.none,
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMD),
-                              ),
-                              items: categories.map((cat) {
-                                return DropdownMenuItem(value: cat, child: Text(cat.toUpperCase(), style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600)));
+                            Wrap(
+                              spacing: 8.0,
+                              runSpacing: 8.0,
+                              children: categories.map((cat) {
+                                final isSelected = _selectedCategory == cat;
+                                return ChoiceChip(
+                                  label: Text(cat.toUpperCase()),
+                                  selected: isSelected,
+                                  onSelected: (selected) {
+                                    if (selected) setState(() => _selectedCategory = cat);
+                                  },
+                                  selectedColor: AppColors.accent.withValues(alpha: 0.2),
+                                  backgroundColor: AppColors.background,
+                                  labelStyle: AppTextStyles.bodyLarge.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: isSelected ? AppColors.accent : AppColors.textSecondary,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                                    side: BorderSide(color: isSelected ? AppColors.accent : AppColors.border),
+                                  ),
+                                );
                               }).toList(),
-                              onChanged: (val) {
-                                setState(() => _selectedCategory = val);
-                              },
                             ),
                           ],
                         ),
@@ -288,103 +312,123 @@ class _DirectBookingScreenState extends ConsumerState<DirectBookingScreen> {
                       const SizedBox(height: AppDimensions.paddingMD),
 
                       // Date and Time
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-                                boxShadow: [
-                                  BoxShadow(color: AppColors.textPrimary.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
-                                ],
-                              ),
-                              padding: const EdgeInsets.all(AppDimensions.paddingMD),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.calendar_month_rounded, color: AppColors.accent, size: 20),
-                                      const SizedBox(width: 8),
-                                      const Text('Date', style: AppTextStyles.labelLarge),
-                                    ],
-                                  ),
-                                  const SizedBox(height: AppDimensions.paddingSM),
-                                  InkWell(
-                                    onTap: () async {
-                                      final picked = await showDatePicker(
-                                        context: context,
-                                        initialDate: _selectedDate,
-                                        firstDate: DateTime.now(),
-                                        lastDate: DateTime.now().add(const Duration(days: 60)),
-                                      );
-                                      if (picked != null) {
-                                        setState(() => _selectedDate = picked);
-                                      }
-                                    },
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMD, vertical: 14),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.background,
-                                        borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.surface,
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                          boxShadow: [
+                            BoxShadow(color: AppColors.textPrimary.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(AppDimensions.paddingMD),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.calendar_month_rounded, color: AppColors.accent, size: 20),
+                                const SizedBox(width: 8),
+                                const Text('Date', style: AppTextStyles.labelLarge),
+                              ],
+                            ),
+                            const SizedBox(height: AppDimensions.paddingSM),
+                            InkWell(
+                              onTap: () async {
+                                final picked = await showDatePicker(
+                                  context: context,
+                                  initialDate: _selectedDate,
+                                  firstDate: DateTime.now(),
+                                  lastDate: DateTime.now().add(const Duration(days: 60)),
+                                  builder: (context, child) {
+                                    return Theme(
+                                      data: Theme.of(context).copyWith(
+                                        colorScheme: const ColorScheme.light(
+                                          primary: AppColors.accent,
+                                          onPrimary: Colors.white,
+                                          onSurface: AppColors.textPrimary,
+                                        ),
                                       ),
-                                      child: Text(DateFormat.MMMEd().format(_selectedDate), style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
-                                    ),
-                                  ),
-                                ],
+                                      child: child!,
+                                    );
+                                  },
+                                );
+                                if (picked != null) {
+                                  setState(() {
+                                    _selectedDate = picked;
+                                    if (!_availableTimeSlots.contains(_selectedTimeSlot)) {
+                                      _selectedTimeSlot = _availableTimeSlots.isNotEmpty ? _availableTimeSlots.first : '';
+                                    }
+                                  });
+                                }
+                              },
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingMD, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: AppColors.background,
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                                  border: Border.all(color: AppColors.border),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(DateFormat.yMMMMEEEEd().format(_selectedDate), style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600)),
+                                    const Icon(Icons.edit_calendar_rounded, color: AppColors.textSecondary, size: 20),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: AppDimensions.paddingMD),
-                          Expanded(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: AppColors.surface,
-                                borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-                                boxShadow: [
-                                  BoxShadow(color: AppColors.textPrimary.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4)),
-                                ],
-                              ),
-                              padding: const EdgeInsets.all(AppDimensions.paddingMD),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.access_time_rounded, color: AppColors.accent, size: 20),
-                                      const SizedBox(width: 8),
-                                      const Text('Time', style: AppTextStyles.labelLarge),
-                                    ],
-                                  ),
-                                  const SizedBox(height: AppDimensions.paddingSM),
-                                  DropdownButtonFormField<String>(
-                                    value: _selectedTimeSlot,
-                                    isExpanded: true,
-                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: AppColors.accent),
-                                    decoration: InputDecoration(
-                                      filled: true,
-                                      fillColor: AppColors.background,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-                                        borderSide: BorderSide.none,
-                                      ),
-                                      contentPadding: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingSM),
-                                    ),
-                                    items: _timeSlots.map((slot) {
-                                      // Shorten slot text for narrow screens
-                                      final shortSlot = slot.replaceAll(' AM', 'am').replaceAll(' PM', 'pm').replaceAll(':00', '');
-                                      return DropdownMenuItem(value: slot, child: Text(shortSlot, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w600)));
-                                    }).toList(),
-                                    onChanged: (val) {
-                                      if (val != null) setState(() => _selectedTimeSlot = val);
-                                    },
-                                  ),
-                                ],
-                              ),
+                            const SizedBox(height: AppDimensions.paddingLG),
+                            Row(
+                              children: [
+                                const Icon(Icons.access_time_rounded, color: AppColors.accent, size: 20),
+                                const SizedBox(width: 8),
+                                const Text('Time', style: AppTextStyles.labelLarge),
+                              ],
                             ),
-                          ),
-                        ],
+                            const SizedBox(height: AppDimensions.paddingSM),
+                            if (_availableTimeSlots.isEmpty)
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(AppDimensions.paddingMD),
+                                decoration: BoxDecoration(
+                                  color: AppColors.error.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                                ),
+                                child: const Text(
+                                  'No time slots available for today.',
+                                  style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w600),
+                                  textAlign: TextAlign.center,
+                                ),
+                              )
+                            else
+                              Wrap(
+                                spacing: 8.0,
+                                runSpacing: 8.0,
+                                children: _availableTimeSlots.map((slot) {
+                                  final isSelected = _selectedTimeSlot == slot;
+                                  final shortSlot = slot.replaceAll(' AM', 'am').replaceAll(' PM', 'pm').replaceAll(':00', '');
+                                  return ChoiceChip(
+                                    label: Text(shortSlot),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      if (selected) setState(() => _selectedTimeSlot = slot);
+                                    },
+                                    selectedColor: AppColors.accent.withValues(alpha: 0.2),
+                                    backgroundColor: AppColors.background,
+                                    labelStyle: AppTextStyles.bodyLarge.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected ? AppColors.accent : AppColors.textSecondary,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                                      side: BorderSide(color: isSelected ? AppColors.accent : AppColors.border),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                          ],
+                        ),
                       ),
                       const SizedBox(height: AppDimensions.paddingXL),
 

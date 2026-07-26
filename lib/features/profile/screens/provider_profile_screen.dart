@@ -18,8 +18,10 @@ import '../../../core/router/route_names.dart';
 import '../providers/profile_providers.dart';
 import '../providers/provider_profile_providers.dart';
 import '../../../core/utils/snackbar_helper.dart';
+import '../../../core/services/permission_service.dart';
+import '../../../core/services/notification_service.dart';
+import '../../notifications/services/notification_service.dart';
 import '../../../shared/widgets/widgets.dart';
-
 
 class ProviderProfileScreen extends ConsumerStatefulWidget {
   const ProviderProfileScreen({super.key});
@@ -183,6 +185,23 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
     if (confirm == true) {
       ref.read(authNotifierProvider.notifier).logout();
     }
+  }
+
+  Future<void> _toggleNotifications(bool value) async {
+    if (value) {
+      final granted = await PermissionService.requestNotificationPermission();
+      if (!granted) {
+        if (mounted) {
+          SnackbarHelper.error(context, 'Notification permission denied. Please enable in settings.');
+        }
+        return;
+      }
+      
+      // Sync the FCM token so notifications can actually be received
+      await FcmNotificationService.syncToken();
+    }
+    // Update the provider state
+    ref.read(notificationsEnabledProvider.notifier).toggle(value);
   }
 
   @override
@@ -652,12 +671,14 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
         Container(
           margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG),
           decoration: BoxDecoration(
-            color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
             border: Border.all(color: AppColors.border),
           ),
-          child: Column(
-            children: [
+          child: Material(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+            child: Column(
+              children: [
               ListTile(
                 leading: const Icon(Icons.location_on_rounded, color: AppColors.textSecondary),
                 title: const Text('Saved Address'),
@@ -702,9 +723,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                 secondary: const Icon(Icons.notifications_rounded, color: AppColors.textSecondary),
                 value: notifs,
                 activeColor: AppColors.accent,
-                onChanged: (val) {
-                  ref.read(notificationsEnabledProvider.notifier).toggle(val);
-                },
+                onChanged: _toggleNotifications,
               ),
 
               const Divider(height: 1, indent: 56),
@@ -721,10 +740,18 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
               const Divider(height: 1, indent: 56),
               ListTile(
                 leading: const Icon(Icons.help_outline_rounded, color: AppColors.textSecondary),
-                title: const Text('Help & Support'),
+                title: const Text('Help Center'),
                 trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
                 onTap: () => context.push('/help-center'),
               ),
+              const Divider(height: 1, indent: 56, color: AppColors.border),
+              ListTile(
+                leading: const Icon(Icons.privacy_tip, color: AppColors.textSecondary),
+                title: const Text('Privacy Policy'),
+                trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary, size: 20),
+                onTap: () => context.push('/privacy-policy'),
+              ),
+
               const Divider(height: 1, indent: 56),
               ListTile(
                 leading: const Icon(Icons.logout_rounded, color: AppColors.error),
@@ -734,6 +761,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
               ),
             ],
           ),
+         ),
         ),
       ],
     );

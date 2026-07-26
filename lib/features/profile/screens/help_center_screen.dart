@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/theme/theme.dart';
 
 class HelpCenterScreen extends StatelessWidget {
@@ -66,15 +67,44 @@ class HelpCenterScreen extends StatelessWidget {
             title: 'Chat with Support',
             subtitle: 'Available 24/7',
             isDark: isDark,
-            onTap: () {},
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Chat support coming soon!')),
+              );
+            },
           ),
           const SizedBox(height: AppDimensions.paddingMD),
           _buildContactButton(
             icon: Icons.email_outlined,
             title: 'Email Us',
-            subtitle: 'support@protasker.com',
+            subtitle: 'vaibhavjoshi0709@gmail.com',
             isDark: isDark,
-            onTap: () {},
+            onTap: () async {
+              final Uri emailLaunchUri = Uri(
+                scheme: 'mailto',
+                path: 'vaibhavjoshi0709@gmail.com',
+                queryParameters: {
+                  'subject': 'Support Request: ProTasker',
+                },
+              );
+              try {
+                if (await canLaunchUrl(emailLaunchUri)) {
+                  await launchUrl(emailLaunchUri);
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Could not launch email app')),
+                    );
+                  }
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Error opening email client')),
+                  );
+                }
+              }
+            },
           ),
         ],
       ),

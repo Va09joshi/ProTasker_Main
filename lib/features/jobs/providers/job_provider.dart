@@ -62,6 +62,18 @@ class JobNotifier extends AsyncNotifier<void> {
       return false;
     }
   }
+
+  Future<bool> deleteJob(String jobId) async {
+    state = const AsyncLoading();
+    try {
+      await _repository.deleteJob(jobId);
+      state = const AsyncData(null);
+      return true;
+    } catch (e, st) {
+      state = AsyncError(e, st);
+      return false;
+    }
+  }
 }
 
 // Feed provider for providers to see open jobs

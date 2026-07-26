@@ -51,6 +51,11 @@ class PrivacyPolicyScreen extends StatelessWidget {
               content: 'Under certain circumstances, you have rights under data protection laws in relation to your personal data, including the right to request access, correction, erasure, restriction, transfer, to object to processing, to portability of data and to withdraw consent.',
               isDark: isDark,
             ),
+            _buildSection(
+              title: '6. Contact Us',
+              content: 'If you have any questions about this privacy policy or our privacy practices, please contact us at vaibhavjoshi0709@gmail.com.',
+              isDark: isDark,
+            ),
             const SizedBox(height: AppDimensions.paddingXL),
           ],
         ),

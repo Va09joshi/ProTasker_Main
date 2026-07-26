@@ -13,6 +13,10 @@ import '../../../core/theme/theme.dart';
 import '../../../core/utils/role_guard.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/providers/user_session_provider.dart';
+import '../../../core/services/permission_service.dart';
+import '../../../core/services/notification_service.dart';
+import '../../notifications/services/notification_service.dart';
+import '../../../core/utils/snackbar_helper.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../providers/profile_providers.dart';
 import '../../home/providers/home_providers.dart';
@@ -44,6 +48,18 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
   }
 
   Future<void> _toggleNotifications(bool value) async {
+    if (value) {
+      final granted = await PermissionService.requestNotificationPermission();
+      if (!granted) {
+        if (mounted) {
+          SnackbarHelper.error(context, 'Notification permission denied. Please enable in settings.');
+        }
+        return;
+      }
+      
+      // Sync the FCM token so notifications can actually be received
+      await FcmNotificationService.syncToken();
+    }
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notificationsEnabled', value);
     ref.read(notificationsEnabledProvider.notifier).toggle(value);
@@ -197,20 +213,6 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
 
 
 
-  Future<void> _rateApp() async {
-    // In a real app, use in_app_review package. 
-    // For now, we simulate success or fallback to url.
-    try {
-      final url = Uri.parse('https://play.google.com/store/apps/details?id=com.kkinfotech.protasker');
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url, mode: LaunchMode.externalApplication);
-      } else {
-        if (mounted) SnackbarHelper.success(context, 'Thank you for rating Protasker!');
-      }
-    } catch (e) {
-      if (mounted) SnackbarHelper.error(context, 'Could not open store. Please try again later.');
-    }
-  }
 
   Widget _buildSettingsList(BuildContext context, UserModel user) {
     final notifs = ref.watch(notificationsEnabledProvider);
@@ -225,12 +227,14 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
         Container(
           margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG),
           decoration: BoxDecoration(
-            color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
             border: Border.all(color: AppColors.border, width: AppDimensions.cardBorderWidth),
           ),
-          child: Column(
-            children: [
+          child: Material(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+            child: Column(
+              children: [
               ListTile(
                 leading: const Icon(Icons.location_on_rounded, color: AppColors.textSecondary),
                 title: const Text('Saved Address'),
@@ -287,6 +291,7 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
               ),
             ],
           ),
+         ),
         ),
         const SizedBox(height: AppDimensions.paddingLG),
         Padding(
@@ -296,12 +301,14 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
         Container(
           margin: const EdgeInsets.symmetric(horizontal: AppDimensions.paddingLG),
           decoration: BoxDecoration(
-            color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
             border: Border.all(color: AppColors.border, width: AppDimensions.cardBorderWidth),
           ),
-          child: Column(
-            children: [
+          child: Material(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+            child: Column(
+              children: [
               ListTile(
                 leading: const Icon(Icons.help, color: AppColors.textSecondary),
                 title: Text('Help Center', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
@@ -314,18 +321,12 @@ class _ClientProfileScreenState extends ConsumerState<ClientProfileScreen> {
                 leading: const Icon(Icons.privacy_tip, color: AppColors.textSecondary),
                 title: Text('Privacy Policy', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
                 trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary, size: 20),
-                onTap: () => context.push('/privacy-policy'),
-              ),
-              const Divider(height: 1, indent: 56, color: AppColors.border),
-              ListTile(
-                leading: const Icon(Icons.star, color: AppColors.textSecondary),
-                title: Text('Rate the App', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w500)),
-                trailing: const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary, size: 20),
                 shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(bottom: Radius.circular(AppDimensions.radiusLG))),
-                onTap: _rateApp,
+                onTap: () => context.push('/privacy-policy'),
               ),
             ],
           ),
+         ),
         ),
 
         const SizedBox(height: AppDimensions.paddingLG),

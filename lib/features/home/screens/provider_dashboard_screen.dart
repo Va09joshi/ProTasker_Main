@@ -7,6 +7,9 @@ import '../../../core/theme/theme.dart';
 import '../../../shared/models/models.dart';
 import '../../../shared/widgets/widgets.dart';
 import '../providers/provider_dashboard_providers.dart';
+import '../../jobs/providers/job_provider.dart';
+import '../../jobs/models/job_post.dart';
+import '../../jobs/screens/job_feed_screen.dart';
 import '../../../core/utils/snackbar_helper.dart';
 import '../../../shared/providers/user_session_provider.dart';
 import '../../../core/router/route_names.dart';
@@ -262,7 +265,7 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                       ),
                       _buildStatsGrid(ref),
                       const SizedBox(height: AppDimensions.paddingXL),
-                      _buildJobBoardBanner(context),
+                      _buildJobBoardBanner(context, ref),
                       const SizedBox(height: AppDimensions.paddingXL),
                       _buildActiveJob(context, ref),
                       const SizedBox(height: AppDimensions.paddingXL),
@@ -369,7 +372,50 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
     );
   }
 
-  Widget _buildJobBoardBanner(BuildContext context) {
+  Widget _buildJobBoardBanner(BuildContext context, WidgetRef ref) {
+    final jobsAsync = ref.watch(jobFeedProvider);
+    return jobsAsync.when(
+      data: (jobs) {
+        if (jobs.isEmpty) {
+          return _buildEmptyJobBanner(context);
+        }
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Available Jobs', style: AppTextStyles.headingLarge),
+                TextButton(
+                  onPressed: () => context.pushNamed(RouteNames.jobFeed),
+                  child: Text('See All', style: AppTextStyles.labelLarge.copyWith(color: AppColors.primary)),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimensions.paddingSM),
+            SizedBox(
+              height: 200,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: jobs.length > 5 ? 5 : jobs.length,
+                clipBehavior: Clip.none,
+                separatorBuilder: (_, __) => const SizedBox(width: AppDimensions.paddingMD),
+                itemBuilder: (context, index) {
+                  final job = jobs[index];
+                  return _buildMiniJobCard(context, ref, job);
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const LoadingShimmer(type: ShimmerType.dashboard),
+      error: (_, __) => _buildEmptyJobBanner(context),
+    );
+  }
+
+  Widget _buildEmptyJobBanner(BuildContext context) {
     return GestureDetector(
       onTap: () => context.pushNamed(RouteNames.jobFeed),
       child: Container(
@@ -403,11 +449,105 @@ class _ProviderDashboardScreenState extends ConsumerState<ProviderDashboardScree
                 color: Colors.white,
                 shape: BoxShape.circle,
               ),
-              clipBehavior: Clip.antiAlias,
-              child: Image.asset(
-                'assets/images/map_near.png',
-                fit: BoxFit.cover,
-              ),
+              child: const Icon(Icons.arrow_forward, color: AppColors.primary),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMiniJobCard(BuildContext context, WidgetRef ref, JobPost job) {
+    final distanceAsync = ref.watch(jobDistanceProvider(job));
+    final clientAsync = ref.watch(jobClientProvider(job.clientId));
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return GestureDetector(
+      onTap: () => context.push('/job/${job.id}'),
+      child: Container(
+        width: 280,
+        padding: const EdgeInsets.all(AppDimensions.paddingLG),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkSurface : AppColors.surface,
+          borderRadius: BorderRadius.circular(24.0),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.8), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                  ),
+                  child: Text(job.category, style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary)),
+                ),
+                Text(
+                  job.budget != null ? '₹${job.budget!.toStringAsFixed(0)}' : 'Negotiable',
+                  style: AppTextStyles.labelLarge.copyWith(color: AppColors.success, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimensions.paddingMD),
+            Text(
+              job.title,
+              style: AppTextStyles.headingMedium.copyWith(fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              job.description,
+              style: AppTextStyles.bodySmall.copyWith(color: AppColors.textSecondary),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                clientAsync.when(
+                  data: (client) {
+                    if (client == null) return const SizedBox.shrink();
+                    return AppAvatar(imageUrl: client.profilePhoto, name: client.name, size: 24);
+                  },
+                  loading: () => const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2)),
+                  error: (_, __) => const Icon(Icons.person, size: 24),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: clientAsync.when(
+                    data: (client) => Text(
+                      client?.name ?? 'Unknown',
+                      style: AppTextStyles.labelSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    loading: () => const SizedBox.shrink(),
+                    error: (_, __) => const SizedBox.shrink(),
+                  ),
+                ),
+                const Icon(Icons.location_on_outlined, size: 14, color: AppColors.textTertiary),
+                const SizedBox(width: 4),
+                distanceAsync.when(
+                  data: (distance) => Text(
+                    distance != null ? '${distance.toStringAsFixed(1)} km' : 'Nearby',
+                    style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary),
+                  ),
+                  loading: () => const SizedBox(width: 20, height: 10, child: LinearProgressIndicator()),
+                  error: (_, __) => Text('Nearby', style: AppTextStyles.caption.copyWith(color: AppColors.textTertiary)),
+                ),
+              ],
             ),
           ],
         ),

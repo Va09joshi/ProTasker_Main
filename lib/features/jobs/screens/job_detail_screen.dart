@@ -66,11 +66,46 @@ class JobDetailScreen extends ConsumerWidget {
   final String jobId;
   const JobDetailScreen({super.key, required this.jobId});
 
+  void _confirmDelete(BuildContext context, WidgetRef ref, String jobId) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Job'),
+        content: const Text('Are you sure you want to delete this job? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // close dialog
+              final success = await ref.read(jobProvider.notifier).deleteJob(jobId);
+              if (success && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Job deleted successfully')),
+                );
+                context.pop(); // Go back to previous screen
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Failed to delete job')),
+                );
+              }
+            },
+            child: const Text('Delete', style: TextStyle(color: AppColors.error)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final jobAsync = ref.watch(jobDetailProvider(jobId));
     final currentUserAsync = ref.watch(currentUserProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    final isOwner = jobAsync.value?.clientId != null && jobAsync.value?.clientId == currentUserAsync.value?.uid;
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
@@ -78,6 +113,13 @@ class JobDetailScreen extends ConsumerWidget {
         title: const Text('Job Details'),
         backgroundColor: AppColors.primary, foregroundColor: Colors.white,
         elevation: 0,
+        actions: [
+          if (isOwner)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: () => _confirmDelete(context, ref, jobId),
+            ),
+        ],
       ),
       body: jobAsync.when(
         data: (job) {
@@ -98,7 +140,13 @@ class JobDetailScreen extends ConsumerWidget {
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.darkSurface : Colors.white,
                     borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-                    border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,11 +221,31 @@ class JobDetailScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
+                      const SizedBox(height: AppDimensions.paddingMD),
+                      Container(
+                        padding: const EdgeInsets.all(AppDimensions.paddingMD),
+                        decoration: BoxDecoration(
+                          color: isDark ? AppColors.darkBackground : AppColors.background,
+                          borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Budget', style: AppTextStyles.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                            Text(
+                              job.budget != null ? '₹${job.budget!.toStringAsFixed(0)}' : 'Negotiable',
+                              style: AppTextStyles.headingMedium.copyWith(color: AppColors.success, fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 
-                const SizedBox(height: AppDimensions.paddingXL),
+                const SizedBox(height: AppDimensions.paddingLG),
+                const Divider(height: 1),
+                const SizedBox(height: AppDimensions.paddingLG),
 
                 // Client Details
                 const Text('Posted By', style: AppTextStyles.headingMedium),
@@ -190,7 +258,13 @@ class JobDetailScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.darkSurface : Colors.white,
                         borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-                        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
@@ -227,13 +301,21 @@ class JobDetailScreen extends ConsumerWidget {
                   error: (_, __) => const Text('Error loading client details'),
                 ),
 
-                const SizedBox(height: AppDimensions.paddingXL),
+                const SizedBox(height: AppDimensions.paddingLG),
+                const Divider(height: 1),
+                const SizedBox(height: AppDimensions.paddingLG),
                 Container(
                   padding: const EdgeInsets.all(AppDimensions.paddingLG),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.darkSurface : Colors.white,
                     borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-                    border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -256,49 +338,56 @@ class JobDetailScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: AppDimensions.paddingXL),
+                const SizedBox(height: AppDimensions.paddingLG),
+                const Divider(height: 1),
+                const SizedBox(height: AppDimensions.paddingLG),
 
                 if (job.imageUrls.isNotEmpty) ...[
                   const Text('Photos', style: AppTextStyles.headingMedium),
                   const SizedBox(height: AppDimensions.paddingSM),
                   SizedBox(
-                    height: 120,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
+                    height: 240,
+                    width: double.infinity,
+                    child: PageView.builder(
                       itemCount: job.imageUrls.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: AppDimensions.paddingMD),
                       itemBuilder: (context, index) {
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-                          child: Image.network(
-                            job.imageUrls[index],
-                            width: 120,
-                            height: 120,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                width: 120,
-                                height: 120,
-                                color: AppColors.surface,
-                                child: const Center(child: CircularProgressIndicator()),
-                              );
-                            },
+                        return Padding(
+                          padding: const EdgeInsets.only(right: AppDimensions.paddingMD),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                            child: Image.network(
+                              job.imageUrls[index],
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return Container(
+                                  color: isDark ? AppColors.darkSurface : AppColors.surface,
+                                  child: const Center(child: CircularProgressIndicator()),
+                                );
+                              },
+                            ),
                           ),
                         );
                       },
                     ),
                   ),
-                  const SizedBox(height: AppDimensions.paddingXL),
+                  const SizedBox(height: AppDimensions.paddingLG),
+                  const Divider(height: 1),
+                  const SizedBox(height: AppDimensions.paddingLG),
                 ],
 
-                const SizedBox(height: AppDimensions.paddingXL),
                 Container(
                   padding: const EdgeInsets.all(AppDimensions.paddingLG),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.darkSurface : Colors.white,
                     borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-                    border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.0),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,10 +431,16 @@ class JobDetailScreen extends ConsumerWidget {
                         width: double.infinity,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.border, width: 1.0),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: ClipRRect(
-                          borderRadius: BorderRadius.circular(11),
+                          borderRadius: BorderRadius.circular(12),
                           child: ref.watch(jobMarkerProvider(job.category)).when(
                             data: (markerIcon) => GoogleMap(
                               initialCameraPosition: CameraPosition(

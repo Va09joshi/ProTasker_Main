@@ -57,7 +57,7 @@ class JobFeedScreen extends ConsumerWidget {
             separatorBuilder: (_, __) => const SizedBox(height: AppDimensions.paddingMD),
             itemBuilder: (context, index) {
               final job = jobs[index];
-              return _JobFeedCard(job: job);
+              return JobFeedCard(job: job);
             },
           );
         },
@@ -68,10 +68,10 @@ class JobFeedScreen extends ConsumerWidget {
   }
 }
 
-class _JobFeedCard extends ConsumerWidget {
+class JobFeedCard extends ConsumerWidget {
   final JobPost job;
 
-  const _JobFeedCard({required this.job});
+  const JobFeedCard({super.key, required this.job});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -82,10 +82,13 @@ class _JobFeedCard extends ConsumerWidget {
 
     return Card(
       elevation: 0,
+      margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-        side: const BorderSide(color: AppColors.border, width: 1),
+        borderRadius: BorderRadius.circular(24.0),
+        side: BorderSide(color: AppColors.success.withValues(alpha: 0.8), width: 1.5),
       ),
+      color: isDark ? AppColors.darkSurface : AppColors.surface,
+      clipBehavior: Clip.antiAlias,
       child: Padding(
         padding: const EdgeInsets.all(AppDimensions.paddingLG),
         child: Column(
@@ -94,19 +97,31 @@ class _JobFeedCard extends ConsumerWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.paddingSM,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
-                  ),
-                  child: Text(
-                    job.category,
-                    style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimensions.paddingSM,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+                      ),
+                      child: Text(
+                        job.category,
+                        style: AppTextStyles.labelSmall.copyWith(color: AppColors.primary),
+                      ),
+                    ),
+                    const SizedBox(width: AppDimensions.paddingSM),
+                    Text(
+                      job.budget != null ? '₹${job.budget!.toStringAsFixed(0)}' : 'Negotiable',
+                      style: AppTextStyles.labelLarge.copyWith(
+                        color: AppColors.success,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
                 Text(
                   DateFormat.yMMMd().format(job.createdAt),

@@ -16,6 +16,10 @@ class JobRepository {
     await _firestore.collection(_collection).doc(jobId).update({'status': status});
   }
 
+  Future<void> deleteJob(String jobId) async {
+    await _firestore.collection(_collection).doc(jobId).delete();
+  }
+
   // Get all open jobs for the provider feed
   Stream<List<JobPost>> getOpenJobs() {
     return _firestore

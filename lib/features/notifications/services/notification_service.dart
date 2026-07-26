@@ -18,6 +18,19 @@ class FcmNotificationService {
     // Initialize local notifications
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
+        
+    // Create the default channel that FCM uses in the manifest
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'protasker_channel', // id
+      'ProTasker Notifications', // name
+      description: 'Default channel for ProTasker notifications',
+      importance: Importance.max,
+    );
+
+    await _localNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
     
     // iOS initialization settings
     const DarwinInitializationSettings initializationSettingsDarwin =
@@ -77,9 +90,9 @@ class FcmNotificationService {
         body: notification.body,
         notificationDetails: const NotificationDetails(
           android: AndroidNotificationDetails(
-            'high_importance_channel',
-            'High Importance Notifications',
-            channelDescription: 'This channel is used for important notifications.',
+            'protasker_channel',
+            'ProTasker Notifications',
+            channelDescription: 'Default channel for ProTasker notifications',
             importance: Importance.max,
             priority: Priority.high,
           ),
